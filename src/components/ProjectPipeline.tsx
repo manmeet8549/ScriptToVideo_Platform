@@ -7,7 +7,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   generateApi,
   avatarsApi,
+  voicesApi,
   type HeyGenAvatar,
+  type ElevenLabsVoice,
 } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -216,6 +218,76 @@ export default function ProjectPipeline() {
   const [voicePitch, setVoicePitch] = useState<number>(0);
   const [voiceEmotion, setVoiceEmotion] = useState<string>('Professional & Calm');
   const [isScriptPreviewOpen, setIsScriptPreviewOpen] = useState(false);
+
+  // Custom ElevenLabs voices state
+  const [elevenLabsVoices, setElevenLabsVoices] = useState<ElevenLabsVoice[]>([]);
+  const [isElevenVoicesLoading, setIsElevenVoicesLoading] = useState(false);
+  const [elevenVoicesError, setElevenVoicesError] = useState<string | null>(null);
+  const [voiceSearchQuery, setVoiceSearchQuery] = useState('');
+  const [voiceTab, setVoiceTab] = useState<'presets' | 'all'>('presets');
+  const [playingPreviewUrl, setPlayingPreviewUrl] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Fetch ElevenLabs voices if activeStepIndex is 3
+  useEffect(() => {
+    if (activeStepIndex !== 3) return;
+
+    const fetchVoices = async () => {
+      setIsElevenVoicesLoading(true);
+      setElevenVoicesError(null);
+      try {
+        const res = await voicesApi.list();
+        setElevenLabsVoices(res.voices || []);
+      } catch (err) {
+        console.error('Failed to load ElevenLabs voices:', err);
+        setElevenVoicesError('ElevenLabs API key not configured or failed to load voices. Please verify your ElevenLabs API Key in Settings.');
+      } finally {
+        setIsElevenVoicesLoading(false);
+      }
+    };
+
+    fetchVoices();
+  }, [activeStepIndex]);
+
+  const handleTogglePreview = (url: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (playingPreviewUrl === url) {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+      setPlayingPreviewUrl(null);
+    } else {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+      const audio = new Audio(url);
+      previewAudioRef.current = audio;
+      audio.play().catch(err => console.error('Audio play failed:', err));
+      setPlayingPreviewUrl(url);
+      audio.onended = () => {
+        setPlayingPreviewUrl(null);
+      };
+    }
+  };
+
+  const getVoicePreviewUrl = (voiceId: string) => {
+    const matched = elevenLabsVoices.find(v => v.voice_id === voiceId);
+    return matched?.preview_url || null;
+  };
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+    };
+  }, []);
+
+  const filteredVoices = elevenLabsVoices.filter(v =>
+    v.name.toLowerCase().includes(voiceSearchQuery.toLowerCase())
+  );
 
   // Avatar selections (Step 4)
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('');
@@ -781,47 +853,194 @@ export default function ProjectPipeline() {
                     )}
                   </div>
 
-                  {/* Premium Voices Grid */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider">Premium Voices</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {PREMIUM_VOICES.map((v) => {
-                        const isSelected = selectedVoiceId === v.id;
-                        return (
-                          <div
-                            key={v.id}
-                            onClick={() => setSelectedVoiceId(v.id)}
-                            className={`rounded-2xl border p-4 transition-all duration-200 cursor-pointer flex items-center justify-between hover:shadow-xs ${
-                              isSelected
-                                ? 'border-black bg-white ring-1 ring-black shadow-xs'
-                                : 'border-gray-100 bg-white hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <button className="h-8 w-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-black flex items-center justify-center shrink-0">
-                                <Play className="h-3.5 w-3.5 fill-black stroke-none ml-0.5" />
-                              </button>
-                              <div className="min-w-0">
-                                <h4 className="font-bold text-sm text-black truncate flex items-center gap-1.5">
-                                  {v.name}
-                                  {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-                                </h4>
-                                <span className="text-[10px] text-gray-400 block truncate">{v.role}</span>
+                  {/* Voice Options Tab Selector */}
+                  <div className="flex gap-4 border-b border-gray-100 pb-2">
+                    <button
+                      onClick={() => setVoiceTab('presets')}
+                      className={`text-xs font-bold pb-2 px-1 border-b-2 transition-all ${
+                        voiceTab === 'presets'
+                          ? 'border-black text-black'
+                          : 'border-transparent text-gray-400 hover:text-black'
+                      }`}
+                    >
+                      Premium Presets
+                    </button>
+                    <button
+                      onClick={() => setVoiceTab('all')}
+                      className={`text-xs font-bold pb-2 px-1 border-b-2 transition-all flex items-center gap-1.5 ${
+                        voiceTab === 'all'
+                          ? 'border-black text-black'
+                          : 'border-transparent text-gray-400 hover:text-black'
+                      }`}
+                    >
+                      My ElevenLabs Voices
+                      {elevenLabsVoices.length > 0 && (
+                        <span className="bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold">
+                          {elevenLabsVoices.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {voiceTab === 'presets' ? (
+                    /* Premium Voices Grid */
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {PREMIUM_VOICES.map((v) => {
+                          const isSelected = selectedVoiceId === v.id;
+                          const previewUrl = getVoicePreviewUrl(v.id);
+                          const isPlaying = previewUrl && playingPreviewUrl === previewUrl;
+
+                          return (
+                            <div
+                              key={v.id}
+                              onClick={() => setSelectedVoiceId(v.id)}
+                              className={`rounded-2xl border p-4 transition-all duration-200 cursor-pointer flex items-center justify-between hover:shadow-xs ${
+                                isSelected
+                                  ? 'border-black bg-white ring-1 ring-black shadow-xs'
+                                  : 'border-gray-100 bg-white hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                {previewUrl ? (
+                                  <button
+                                    onClick={(e) => handleTogglePreview(previewUrl, e)}
+                                    className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                                      isPlaying ? 'bg-black text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-black'
+                                    }`}
+                                  >
+                                    {isPlaying ? (
+                                      <Pause className="h-3.5 w-3.5 fill-current" />
+                                    ) : (
+                                      <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
+                                    )}
+                                  </button>
+                                ) : (
+                                  <button className="h-8 w-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-black flex items-center justify-center shrink-0">
+                                    <Play className="h-3.5 w-3.5 fill-black stroke-none ml-0.5" />
+                                  </button>
+                                )}
+                                <div className="min-w-0">
+                                  <h4 className="font-bold text-sm text-black truncate flex items-center gap-1.5">
+                                    {v.name}
+                                    {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                                  </h4>
+                                  <span className="text-[10px] text-gray-400 block truncate">{v.role}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
+                                {v.badges.map(b => (
+                                  <span key={b} className="bg-gray-50 border border-gray-100 text-gray-400 rounded px-1.5 py-0.5 text-[8px] font-extrabold">
+                                    {b}
+                                  </span>
+                                ))}
                               </div>
                             </div>
-
-                            <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
-                              {v.badges.map(b => (
-                                <span key={b} className="bg-gray-50 border border-gray-100 text-gray-400 rounded px-1.5 py-0.5 text-[8px] font-extrabold">
-                                  {b}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* My ElevenLabs Voices List */
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search ElevenLabs voices..."
+                          value={voiceSearchQuery}
+                          onChange={(e) => setVoiceSearchQuery(e.target.value)}
+                          className="flex h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
+                        />
+                      </div>
+
+                      {isElevenVoicesLoading ? (
+                        <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                          <p className="text-xs text-gray-400">Loading ElevenLabs voices...</p>
+                        </div>
+                      ) : elevenVoicesError ? (
+                        <div className="rounded-2xl border border-dashed border-gray-200 p-8 text-center space-y-3 bg-neutral-50/30">
+                          <AlertCircle className="h-6 w-6 text-amber-500 mx-auto" />
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-bold text-black">Could not fetch voices</h4>
+                            <p className="text-[11px] text-gray-400 max-w-sm mx-auto leading-relaxed">
+                              {elevenVoicesError}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setActiveTab('api-keys');
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-black text-white hover:bg-neutral-800 text-xs font-semibold px-4 py-2 transition-colors"
+                          >
+                            Set API Key
+                          </button>
+                        </div>
+                      ) : filteredVoices.length === 0 ? (
+                        <div className="text-center py-12 text-xs text-gray-400 font-medium">
+                          No voices found matching &quot;{voiceSearchQuery}&quot;
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[280px] overflow-y-auto pr-1">
+                          {filteredVoices.map((v) => {
+                            const isSelected = selectedVoiceId === v.voice_id;
+                            const isPlaying = v.preview_url && playingPreviewUrl === v.preview_url;
+
+                            return (
+                              <div
+                                key={v.voice_id}
+                                onClick={() => setSelectedVoiceId(v.voice_id)}
+                                className={`rounded-2xl border p-4 transition-all duration-200 cursor-pointer flex items-center justify-between hover:shadow-xs ${
+                                  isSelected
+                                    ? 'border-black bg-white ring-1 ring-black shadow-xs'
+                                    : 'border-gray-100 bg-white hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {v.preview_url ? (
+                                    <button
+                                      onClick={(e) => handleTogglePreview(v.preview_url!, e)}
+                                      className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                                        isPlaying ? 'bg-black text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-black'
+                                      }`}
+                                    >
+                                      {isPlaying ? (
+                                        <Pause className="h-3.5 w-3.5 fill-current" />
+                                      ) : (
+                                        <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <div className="h-8 w-8 rounded-full bg-neutral-50 flex items-center justify-center text-gray-300 shrink-0">
+                                      <Play className="h-3.5 w-3.5 fill-current ml-0.5 opacity-30" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <h4 className="font-bold text-sm text-black truncate flex items-center gap-1.5">
+                                      {v.name}
+                                      {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                                    </h4>
+                                    <span className="text-[10px] text-gray-400 block truncate capitalize">
+                                      {v.category} Voice
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
+                                  {v.labels && Object.entries(v.labels).slice(0, 2).map(([key, val]) => (
+                                    <span key={key} className="bg-gray-50 border border-gray-100 text-gray-400 rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase">
+                                      {val}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Sliders for customization */}
                   <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-5">
