@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
           isValid = true;
         } else {
           const body = await res.json().catch(() => ({}));
-          errorMessage = body?.error?.message || `NVIDIA NIM responded with status ${res.status}`;
+          errorMessage = body?.detail || body?.error?.message || `NVIDIA NIM responded with status ${res.status}`;
         }
       } else if (providerUpper === 'ELEVENLABS') {
         const res = await fetch('https://api.elevenlabs.io/v1/voices', {

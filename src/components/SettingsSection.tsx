@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Settings as SettingsIcon, Check, Loader2,
-  Monitor, Sun, Moon
+  Monitor, Sun, Moon, Camera
 } from 'lucide-react';
 import { useUserSettings, useSaveUserSettings } from '@/hooks/useUserSettings';
 
 export default function SettingsSection() {
   const { data: userData, isLoading, refetch } = useUserSettings();
   const saveMutation = useSaveUserSettings();
-
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form local state
   const [form, setForm] = useState({
@@ -24,6 +24,7 @@ export default function SettingsSection() {
     defaultDuration: '30 Seconds',
     defaultTone: 'Professional',
     theme: 'System' as 'System' | 'Light' | 'Dark',
+    avatarUrl: '',
   });
 
   // Keep track of initially loaded settings to detect unsaved changes
@@ -35,6 +36,7 @@ export default function SettingsSection() {
     defaultDuration: '30 Seconds',
     defaultTone: 'Professional',
     theme: 'System' as 'System' | 'Light' | 'Dark',
+    avatarUrl: '',
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -50,6 +52,7 @@ export default function SettingsSection() {
         defaultDuration: userData.settings?.defaultDuration || '30 Seconds',
         defaultTone: userData.settings?.defaultTone || 'Professional',
         theme: (userData.settings?.theme as 'System' | 'Light' | 'Dark') || 'System',
+        avatarUrl: userData.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email || 'Felix'}&mouth=smile`,
       };
       setForm(initial);
       setInitialForm(initial);
@@ -64,6 +67,18 @@ export default function SettingsSection() {
 
   const handleInputChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64String = event.target?.result as string;
+      handleInputChange('avatarUrl', base64String);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDiscard = () => {
@@ -82,6 +97,7 @@ export default function SettingsSection() {
           defaultDuration: result.settings?.defaultDuration || '30 Seconds',
           defaultTone: result.settings?.defaultTone || 'Professional',
           theme: (result.settings?.theme as 'System' | 'Light' | 'Dark') || 'System',
+          avatarUrl: result.avatarUrl || form.avatarUrl,
         };
         setForm(updated);
         setInitialForm(updated);
@@ -132,14 +148,77 @@ export default function SettingsSection() {
             </h3>
 
             <div className="flex flex-col sm:flex-row gap-6 items-start">
-              {/* Profile Image Avatar */}
-              <div className="relative group shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=256&auto=format&fit=crop"
-                  alt="Profile Avatar"
-                  className="h-20 w-20 rounded-full border-2 border-neutral-100 object-cover shadow-sm"
-                />
+              {/* Profile Image & Preset Options Column */}
+              <div className="flex flex-col items-center gap-3 shrink-0 w-full sm:w-auto">
+                <div className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={form.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email || 'Felix'}&mouth=smile`}
+                    alt="Profile Avatar"
+                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md transition-opacity duration-300 group-hover:opacity-85 animate-fade-in"
+                  />
+                  
+                  {/* Hidden File Input */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  
+                  <button 
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 bg-black text-white p-2 rounded-full shadow-lg hover:bg-neutral-800 hover:scale-105 active:scale-95 transition-all"
+                    title="Change Profile Picture"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Preset Options */}
+                <div className="flex flex-col items-center gap-1.5 w-full">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Base Presets
+                  </span>
+                  <div className="flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('avatarUrl', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile')}
+                      className={`h-9 w-9 rounded-full overflow-hidden border-2 transition-all p-0.5 hover:scale-105 hover:shadow-sm ${
+                        form.avatarUrl === 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile'
+                          ? 'border-black ring-2 ring-black/10 scale-105'
+                          : 'border-neutral-200 hover:border-neutral-400'
+                      }`}
+                      title="Select Male Preset"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile"
+                        alt="Male Preset"
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('avatarUrl', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&mouth=smile')}
+                      className={`h-9 w-9 rounded-full overflow-hidden border-2 transition-all p-0.5 hover:scale-105 hover:shadow-sm ${
+                        form.avatarUrl === 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&mouth=smile'
+                          ? 'border-black ring-2 ring-black/10 scale-105'
+                          : 'border-neutral-200 hover:border-neutral-400'
+                      }`}
+                      title="Select Female Preset"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&mouth=smile"
+                        alt="Female Preset"
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Input Fields */}
@@ -290,7 +369,7 @@ export default function SettingsSection() {
 
         </div>
 
-        {/* Right Column - Account Summary & Upgrade details */}
+        {/* Right Column - Account Summary */}
         <div className="lg:col-span-4 space-y-6">
           
           {/* Card: Account Summary */}
@@ -312,51 +391,7 @@ export default function SettingsSection() {
                 <span className="text-neutral-400 font-semibold">Connected Providers</span>
                 <span className="font-bold text-neutral-800">{userData.stats?.connectedProviders ?? 0}</span>
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-neutral-400 font-semibold">Current Plan</span>
-                <span className="inline-flex rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-600 border border-neutral-200/50">
-                  Free Tier
-                </span>
-              </div>
             </div>
-          </Card>
-
-          {/* Card: Plan Upgrade */}
-          <Card className="rounded-3xl border border-neutral-900 bg-neutral-950 text-white p-6 space-y-5 shadow-md relative overflow-hidden">
-            {/* Absolute accent glow */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl" />
-
-            <div className="space-y-2">
-              <span className="inline-flex items-center gap-1 text-xs font-extrabold text-neutral-100">
-                ⚡ Free Plan
-              </span>
-              <p className="text-[11px] text-neutral-400 font-sans leading-relaxed">
-                Bring Your Own Key (BYOK) enabled. Pay only for what you generate.
-              </p>
-            </div>
-
-            <ul className="space-y-3 pt-2">
-              <li className="flex items-center gap-2.5">
-                <div className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-white text-black">
-                  <Check className="h-3 w-3 text-black stroke-[3px]" />
-                </div>
-                <span className="text-[11px] font-bold text-neutral-300 font-sans">
-                  Unlimited projects
-                </span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <div className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-white text-black">
-                  <Check className="h-3 w-3 text-black stroke-[3px]" />
-                </div>
-                <span className="text-[11px] font-bold text-neutral-300 font-sans">
-                  OpenAI & Anthropic BYOK
-                </span>
-              </li>
-            </ul>
-
-            <button className="w-full bg-white text-black hover:opacity-90 transition-all font-extrabold text-xs py-3 rounded-2xl mt-4 font-sans tracking-wide">
-              Upgrade Plan
-            </button>
           </Card>
 
         </div>

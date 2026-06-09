@@ -115,7 +115,11 @@ export async function POST(request: NextRequest) {
 
     if (!nimResponse.ok) {
       const errorBody = await nimResponse.json().catch(() => ({}));
-      const errorMsg = errorBody?.error?.message || `NVIDIA NIM returned ${nimResponse.status}`;
+      // NVIDIA NIM returns errors as { detail: "..." } OR { error: { message: "..." } }
+      const errorMsg =
+        errorBody?.detail ||
+        errorBody?.error?.message ||
+        `NVIDIA NIM returned ${nimResponse.status} ${nimResponse.statusText}`;
 
       // Mark failed
       await db.generationHistory.update({

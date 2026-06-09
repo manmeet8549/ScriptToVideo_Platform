@@ -88,13 +88,13 @@ export default function HeroSection() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, delay: 0.3 }}
-        className="mt-10 mb-12 inline-flex items-center justify-center rounded-full border border-gray-100 bg-white px-6 py-3 shadow-md shadow-neutral-100/40"
+        className="mt-10 mb-12 inline-flex items-center justify-center rounded-[32px] md:rounded-full border border-gray-100 bg-white px-6 py-4 md:py-3 shadow-md shadow-neutral-100/40 w-full max-w-lg md:w-auto"
       >
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full justify-center">
           {pipelineSteps.map((step, idx) => {
             const IconComponent = step.icon;
             return (
-              <div key={step.id} className="flex items-center">
+              <div key={step.id} className="flex flex-col sm:flex-row items-center">
                 <div className="relative">
                   <button
                     onMouseEnter={() => setHoveredStep(step.id)}
@@ -123,7 +123,7 @@ export default function HeroSection() {
                 </div>
 
                 {idx < pipelineSteps.length - 1 && (
-                  <ArrowRight className="h-3.5 w-3.5 text-gray-300 mx-1" />
+                  <ArrowRight className="h-3.5 w-3.5 text-gray-300 mx-1 rotate-90 sm:rotate-0 my-1 sm:my-0" />
                 )}
               </div>
             );

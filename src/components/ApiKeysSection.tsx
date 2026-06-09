@@ -263,26 +263,26 @@ export default function ApiKeysSection() {
               </div>
 
               {/* Workflow Flowchart row */}
-              <div className="grid grid-cols-5 items-center gap-2 bg-neutral-50/50 rounded-2xl p-5 border border-neutral-100">
-                <div className="text-center space-y-1.5">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 bg-neutral-50/50 rounded-2xl p-5 border border-neutral-100">
+                <div className="text-center space-y-1.5 flex-1">
                   <span className="font-bold text-sm text-black block">NVIDIA NIM</span>
                   <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[9px] font-bold text-neutral-500 uppercase tracking-wider">
                     Script
                   </span>
                 </div>
-                <div className="flex justify-center">
-                  <ArrowRight className="h-5 w-5 text-neutral-300" />
+                <div className="flex justify-center shrink-0">
+                  <ArrowRight className="h-4 w-4 text-neutral-300 rotate-90 sm:rotate-0" />
                 </div>
-                <div className="text-center space-y-1.5">
+                <div className="text-center space-y-1.5 flex-1">
                   <span className="font-bold text-sm text-black block">ElevenLabs</span>
                   <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[9px] font-bold text-neutral-500 uppercase tracking-wider">
                     Voice
                   </span>
                 </div>
-                <div className="flex justify-center">
-                  <ArrowRight className="h-5 w-5 text-neutral-300" />
+                <div className="flex justify-center shrink-0">
+                  <ArrowRight className="h-4 w-4 text-neutral-300 rotate-90 sm:rotate-0" />
                 </div>
-                <div className="text-center space-y-1.5">
+                <div className="text-center space-y-1.5 flex-1">
                   <span className="font-bold text-sm text-black block">HeyGen</span>
                   <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-0.5 text-[9px] font-bold text-neutral-500 uppercase tracking-wider">
                     Video
@@ -363,14 +363,14 @@ export default function ApiKeysSection() {
               )}
 
               {/* Footer controls */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                 <span className="text-[11px] text-neutral-400 font-sans font-medium">
                   {keys?.NVIDIA?.connected && !editing.NVIDIA && keys.NVIDIA.updatedAt
                     ? `Last Verified: ${getFormattedDate(keys.NVIDIA.updatedAt)}`
                     : ''}
                 </span>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-end">
                   {keys?.NVIDIA?.connected && !editing.NVIDIA ? (
                     <>
                       <Button
@@ -523,14 +523,14 @@ export default function ApiKeysSection() {
               )}
 
               {/* Footer controls */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                 <span className="text-[11px] text-neutral-400 font-sans font-medium">
                   {keys?.ELEVENLABS?.connected && !editing.ELEVENLABS && keys.ELEVENLABS.updatedAt
                     ? `Last Verified: ${getFormattedDate(keys.ELEVENLABS.updatedAt)}`
                     : ''}
                 </span>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-end">
                   {keys?.ELEVENLABS?.connected && !editing.ELEVENLABS ? (
                     <>
                       <Button
@@ -683,14 +683,14 @@ export default function ApiKeysSection() {
               )}
 
               {/* Footer controls */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                 <span className="text-[11px] text-neutral-400 font-sans font-medium">
                   {keys?.HEYGEN?.connected && !editing.HEYGEN && keys.HEYGEN.updatedAt
                     ? `Last Verified: ${getFormattedDate(keys.HEYGEN.updatedAt)}`
                     : ''}
                 </span>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-end">
                   {keys?.HEYGEN?.connected && !editing.HEYGEN ? (
                     <>
                       <Button

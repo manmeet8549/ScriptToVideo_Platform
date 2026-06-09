@@ -13,6 +13,7 @@ const updateSettingsSchema = z.object({
   defaultDuration: z.string().default('30 Seconds'),
   defaultTone: z.string().default('Professional'),
   theme: z.enum(['System', 'Light', 'Dark']).default('System'),
+  avatarUrl: z.string().optional(),
 });
 
 // GET /api/user/settings - Get settings profile and stats for the active user
@@ -70,6 +71,7 @@ export async function GET() {
     return NextResponse.json({
       fullName: user.name || '',
       email: user.email,
+      avatarUrl: user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}&mouth=smile`,
       settings: {
         username: settings.username || '',
         bio: settings.bio || '',
@@ -117,12 +119,16 @@ export async function POST(request: NextRequest) {
       defaultDuration,
       defaultTone,
       theme,
+      avatarUrl,
     } = parsed.data;
 
     // Update user profile name
     await db.user.update({
       where: { id: userId },
-      data: { name: fullName },
+      data: { 
+        name: fullName,
+        ...(avatarUrl !== undefined && { image: avatarUrl })
+      },
     });
 
     // Upsert user settings
@@ -150,6 +156,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       fullName,
+      avatarUrl,
       settings: {
         username: updatedSettings.username,
         bio: updatedSettings.bio,

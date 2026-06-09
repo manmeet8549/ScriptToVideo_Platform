@@ -147,6 +147,7 @@ export interface UserSettings {
 export interface UserSettingsResponse {
   fullName: string;
   email: string;
+  avatarUrl?: string;
   settings: UserSettings;
   stats: {
     memberSince: string;
@@ -166,8 +167,9 @@ export const settingsApi = {
     defaultDuration: string;
     defaultTone: string;
     theme: 'System' | 'Light' | 'Dark';
+    avatarUrl?: string;
   }) =>
-    apiFetch<{ success: boolean; fullName: string; settings: UserSettings }>('/api/user/settings', {
+    apiFetch<{ success: boolean; fullName: string; avatarUrl?: string; settings: UserSettings }>('/api/user/settings', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

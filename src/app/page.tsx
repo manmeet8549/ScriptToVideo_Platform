@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
@@ -27,6 +28,7 @@ export default function Home() {
   const { activeTab, setActiveTab, authView, setIsCreateModalOpen, setAuthView, openProject } = useAppStore();
   const { data: session, status } = useSession();
   const user = session?.user;
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // Fetch projects for dashboard list
   const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
 
@@ -34,8 +36,8 @@ export default function Home() {
     // Skeleton that matches the real layout — no blank screen
     return (
       <div className="flex min-h-screen bg-[#fcfcfc]">
-        {/* Sidebar skeleton */}
-        <aside className="w-64 shrink-0 border-r border-gray-100 bg-white flex flex-col justify-between h-screen sticky top-0 p-6">
+        {/* Sidebar skeleton - desktop only */}
+        <aside className="hidden lg:flex w-64 shrink-0 border-r border-gray-100 bg-white flex-col justify-between h-screen sticky top-0 p-6">
           <div className="space-y-8">
             {/* Logo placeholder */}
             <div className="flex items-center gap-3">
@@ -61,37 +63,47 @@ export default function Home() {
             </div>
           </div>
         </aside>
-        {/* Main content skeleton */}
-        <main className="flex-grow p-10 space-y-10">
-          {/* Header */}
-          <div className="space-y-4">
-            <div className="h-3 w-24 rounded-full bg-gray-100 animate-pulse" />
-            <div className="h-9 w-64 rounded bg-gray-100 animate-pulse" />
-            <div className="h-4 w-96 rounded bg-gray-100 animate-pulse" />
-            <div className="flex gap-3 pt-1">
-              <div className="h-10 w-40 rounded-full bg-gray-100 animate-pulse" />
-              <div className="h-10 w-36 rounded-full bg-gray-100 animate-pulse" />
+        
+        {/* Main content pane with header skeleton */}
+        <div className="flex-grow flex flex-col min-h-screen w-full min-w-0">
+          {/* Mobile Header skeleton */}
+          <header className="lg:hidden sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-100 bg-white px-6 shrink-0">
+            <div className="h-6 w-6 rounded bg-gray-100 animate-pulse" />
+            <div className="h-8 w-24 rounded bg-gray-100 animate-pulse" />
+            <div className="h-8 w-8 rounded-full bg-gray-100 animate-pulse" />
+          </header>
+
+          <main className="flex-grow p-4 sm:p-6 lg:p-10 space-y-10 overflow-x-hidden">
+            {/* Header */}
+            <div className="space-y-4">
+              <div className="h-3 w-24 rounded-full bg-gray-100 animate-pulse" />
+              <div className="h-9 w-64 rounded bg-gray-100 animate-pulse" />
+              <div className="h-4 w-96 rounded bg-gray-100 animate-pulse" />
+              <div className="flex gap-3 pt-1">
+                <div className="h-10 w-40 rounded-full bg-gray-100 animate-pulse" />
+                <div className="h-10 w-36 rounded-full bg-gray-100 animate-pulse" />
+              </div>
             </div>
-          </div>
-          {/* Cards grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-4 h-56 rounded-3xl bg-gray-100 animate-pulse" />
-            <div className="lg:col-span-8 grid grid-cols-3 gap-6">
-              {[1, 2, 3].map((n) => (
-                <div key={n} className="h-56 rounded-3xl bg-gray-100 animate-pulse" />
-              ))}
+            {/* Cards grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-4 h-56 rounded-3xl bg-gray-100 animate-pulse" />
+              <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="h-56 rounded-3xl bg-gray-100 animate-pulse" />
+                ))}
+              </div>
             </div>
-          </div>
-          {/* Recent projects row */}
-          <div className="space-y-4">
-            <div className="h-5 w-40 rounded bg-gray-100 animate-pulse" />
-            <div className="grid grid-cols-4 gap-6">
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className="h-44 rounded-3xl bg-gray-100 animate-pulse" />
-              ))}
+            {/* Recent projects row */}
+            <div className="space-y-4">
+              <div className="h-5 w-40 rounded bg-gray-100 animate-pulse" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className="h-44 rounded-3xl bg-gray-100 animate-pulse" />
+                ))}
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     );
   }
@@ -118,9 +130,9 @@ export default function Home() {
     const dashboardProjects = projects.slice(0, 3);
 
     return (
-      <div className="flex min-h-screen bg-[#fcfcfc] text-black">
-        {/* Left Sidebar */}
-        <aside className="w-64 shrink-0 border-r border-gray-100 bg-white flex flex-col justify-between h-screen sticky top-0 p-6">
+      <div className="flex min-h-screen bg-[#fcfcfc] text-black flex-col lg:flex-row">
+        {/* Left Sidebar (Desktop Only) */}
+        <aside className="hidden lg:flex w-64 shrink-0 border-r border-gray-100 bg-white flex-col justify-between h-screen sticky top-0 p-6">
           <div className="space-y-8">
             {/* Logo */}
             <div className="flex items-center gap-3">
@@ -182,8 +194,149 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* Right Main Panel */}
-        <main className="flex-grow min-h-screen overflow-y-auto p-10 flex flex-col justify-between">
+        {/* Mobile Navigation Drawer & Backdrop */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <div className="lg:hidden fixed inset-0 z-50 flex">
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="fixed inset-0 bg-black/40 backdrop-blur-xs"
+              />
+
+              {/* Drawer Container */}
+              <motion.aside
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="relative flex w-64 max-w-xs flex-col justify-between bg-white p-6 shadow-2xl h-full border-r border-gray-100 z-50"
+              >
+                <div className="space-y-8">
+                  {/* Header & Logo */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black text-white shadow-sm">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4.5 w-4.5">
+                          <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                          <path d="M2 17l10 5 10-5" />
+                          <path d="M2 12l10 5 10-5" />
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="font-sans text-sm font-bold tracking-tight text-black block leading-none">Studio AI</span>
+                        <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider block mt-0.5">Workspace</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-gray-400 hover:text-black p-1 transition-colors"
+                      aria-label="Close menu"
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Nav links */}
+                  <nav className="space-y-1">
+                    {sidebarItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 text-left ${
+                            isActive 
+                              ? 'bg-neutral-100 text-black shadow-sm' 
+                              : 'text-gray-500 hover:text-black hover:bg-neutral-50'
+                          }`}
+                        >
+                          <Icon className={`h-4.5 w-4.5 ${isActive ? 'text-black' : 'text-gray-400'}`} />
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+
+                {/* Footer User Row */}
+                <div className="pt-6 border-t border-gray-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-white text-xs font-bold border border-neutral-800">
+                      {userInitials}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="font-semibold text-xs text-black truncate block font-sans">{user.name || 'Workspace User'}</span>
+                      <span className="text-[9px] text-gray-400 font-medium truncate block font-sans">{user.email}</span>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => { setAuthView(null); signOut({ redirect: false }); }}
+                    className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50/50"
+                    title="Log out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              </motion.aside>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Content Pane Wrapper */}
+        <div className="flex-grow flex flex-col min-h-screen w-full min-w-0">
+          {/* Mobile Header (Only visible on screens < 1024px) */}
+          <header className="lg:hidden sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-100 bg-white/95 backdrop-blur-md px-6 shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="text-gray-500 hover:text-black transition-colors p-1"
+                aria-label="Open menu"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+              {/* Logo */}
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4.5 w-4.5">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
+                  </svg>
+                </div>
+                <span className="font-sans text-sm font-bold tracking-tight text-black">Studio AI</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white hover:bg-neutral-800 transition-colors"
+                title="New Project"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-900 text-white text-xs font-bold border border-neutral-800">
+                {userInitials}
+              </div>
+            </div>
+          </header>
+
+          {/* Right Main Panel */}
+          <main className="flex-grow p-4 sm:p-6 lg:p-10 flex flex-col justify-between overflow-x-hidden">
           <AnimatePresence mode="wait">
             {/* 1. Dashboard Tab */}
             {activeTab === 'dashboard' && (
@@ -517,6 +670,7 @@ export default function Home() {
             <span>Version 1.0.0 (PostgreSQL Build)</span>
           </footer>
         </main>
+        </div> {/* End of Content Pane Wrapper */}
 
         {/* Global Modals */}
         <CreateProjectModal />

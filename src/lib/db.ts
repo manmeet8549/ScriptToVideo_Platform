@@ -11,22 +11,24 @@ const isServer = typeof window === 'undefined';
 let prismaClient: PrismaClient;
 
 if (isServer) {
-  const connectionString =
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5432/postgres';
+  if (globalForPrisma.prisma) {
+    prismaClient = globalForPrisma.prisma;
+  } else {
+    const connectionString =
+      process.env.DATABASE_URL ||
+      'postgresql://postgres:postgres@localhost:5432/postgres';
 
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
 
-  prismaClient =
-    globalForPrisma.prisma ??
-    new PrismaClient({
+    prismaClient = new PrismaClient({
       adapter,
       log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     });
 
-  if (process.env.NODE_ENV !== 'production') {
-    globalForPrisma.prisma = prismaClient;
+    if (process.env.NODE_ENV !== 'production') {
+      globalForPrisma.prisma = prismaClient;
+    }
   }
 } else {
   prismaClient = null as unknown as PrismaClient;

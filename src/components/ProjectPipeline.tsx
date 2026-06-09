@@ -509,7 +509,7 @@ export default function ProjectPipeline() {
           return (
             <div key={step.label} className="flex items-center flex-1 last:flex-none">
               {idx > 0 && (
-                <div className={`flex-1 h-0.5 mx-2 md:mx-4 transition-colors ${
+                <div className={`flex-1 h-0.5 mx-1 md:mx-4 transition-colors ${
                   step.index <= activeStepIndex ? 'bg-black' : 'bg-gray-100'
                 }`} />
               )}
@@ -534,7 +534,7 @@ export default function ProjectPipeline() {
                     step.index
                   )}
                 </div>
-                <span className={`text-[10px] font-extrabold tracking-wide uppercase mt-1 ${
+                <span className={`text-[10px] font-extrabold tracking-wide uppercase mt-1 hidden sm:block ${
                   isActive ? 'text-black font-extrabold' : 'text-gray-400 font-bold'
                 }`}>
                   {step.label}
@@ -939,11 +939,11 @@ export default function ProjectPipeline() {
                         <label className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider">Choose Avatar</label>
                         
                         {avatarsLoading ? (
-                          <div className="grid grid-cols-4 gap-3">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-4 gap-2 sm:gap-3">
                             {[1, 2, 3, 4].map(n => <div key={n} className="h-20 rounded-2xl bg-gray-100 animate-pulse" />)}
                           </div>
                         ) : avatars.length > 0 ? (
-                          <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-4 gap-2 sm:gap-3 max-h-48 overflow-y-auto pr-1">
                             {avatars.map((a) => {
                               const isSelected = selectedAvatarId === a.avatar_id;
                               return (
