@@ -344,7 +344,10 @@ export default function ProjectPipeline() {
       const serialized = serializeProjectPrompt(ideaConcept, ideaAudience, ideaTone, ideaDuration);
       await updateProject.mutateAsync({
         id: selectedProjectId,
-        data: { prompt: serialized },
+        data: {
+          prompt: serialized,
+          ...(generatedScript !== null && generatedScript !== undefined ? { scriptText: generatedScript } : {}),
+        },
       });
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(selectedProjectId) });
     } catch (err) {
@@ -709,12 +712,33 @@ export default function ProjectPipeline() {
                   </div>
 
                   <button
-                    onClick={() => setActiveStepIndex(3)}
-                    disabled={!generatedScript?.trim()}
-                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm h-12 transition-all disabled:opacity-40"
+                    onClick={async () => {
+                      if (!selectedProjectId || !generatedScript) return;
+                      try {
+                        await updateProject.mutateAsync({
+                          id: selectedProjectId,
+                          data: { scriptText: generatedScript, step: 'SCRIPT' },
+                        });
+                        queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(selectedProjectId) });
+                        setActiveStepIndex(3);
+                      } catch (err) {
+                        console.error('Failed to save script:', err);
+                      }
+                    }}
+                    disabled={!generatedScript?.trim() || updateProject.isPending}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm h-12 transition-all disabled:opacity-40 shadow-sm"
                   >
-                    Continue to Voice
-                    <ArrowLeft className="h-4 w-4 rotate-180" />
+                    {updateProject.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving Script...
+                      </>
+                    ) : (
+                      <>
+                        Continue to Voice
+                        <ArrowLeft className="h-4 w-4 rotate-180" />
+                      </>
+                    )}
                   </button>
                 </Card>
               </motion.div>
