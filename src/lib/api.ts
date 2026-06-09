@@ -172,3 +172,86 @@ export const settingsApi = {
       body: JSON.stringify(data),
     }),
 };
+
+// ─── AI Generation Pipeline ────────────────────────────────────────────────────
+
+export interface GenerateScriptResult {
+  script: string;
+  scriptId: string;
+}
+
+export interface GenerateVoiceResult {
+  audioUrl: string; // base64 data URL
+  voiceId: string;
+  duration: string;
+}
+
+export interface GenerateVideoResult {
+  videoId: string;
+  status: 'processing';
+  message: string;
+}
+
+export interface VideoStatusResult {
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  videoUrl?: string;
+  error?: string;
+  videoId?: string;
+}
+
+export const generateApi = {
+  /** Step 1: Generate script from project prompt using NVIDIA NIM */
+  generateScript: (projectId: string) =>
+    apiFetch<GenerateScriptResult>('/api/generate/script', {
+      method: 'POST',
+      body: JSON.stringify({ projectId }),
+    }),
+
+  /** Step 2: Generate voice audio from project script using ElevenLabs */
+  generateVoice: (projectId: string, voiceId?: string) =>
+    apiFetch<GenerateVoiceResult>('/api/generate/voice', {
+      method: 'POST',
+      body: JSON.stringify({ projectId, voiceId }),
+    }),
+
+  /** Step 3: Submit HeyGen avatar video job (returns immediately with videoId) */
+  generateVideo: (data: { projectId: string; avatarId?: string; heygenVoiceId?: string }) =>
+    apiFetch<GenerateVideoResult>('/api/generate/video', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** Step 3b: Poll HeyGen for video completion — call every 10s until status is 'completed' or 'failed' */
+  getVideoStatus: (projectId: string) =>
+    apiFetch<VideoStatusResult>(`/api/generate/video/status?projectId=${projectId}`),
+};
+
+// ─── Voices (ElevenLabs) ──────────────────────────────────────────────────────
+
+export interface ElevenLabsVoice {
+  voice_id: string;
+  name: string;
+  category: string;
+  preview_url: string | null;
+  labels: Record<string, string>;
+}
+
+export const voicesApi = {
+  /** List all available ElevenLabs voices for the authenticated user's API key */
+  list: () => apiFetch<{ voices: ElevenLabsVoice[] }>('/api/voices'),
+};
+
+// ─── Avatars (HeyGen) ─────────────────────────────────────────────────────────
+
+export interface HeyGenAvatar {
+  avatar_id: string;
+  avatar_name: string;
+  gender: string;
+  preview_image_url: string;
+  preview_video_url: string | null;
+}
+
+export const avatarsApi = {
+  /** List all available HeyGen avatars for the authenticated user's API key */
+  list: () => apiFetch<{ avatars: HeyGenAvatar[] }>('/api/avatars'),
+};
