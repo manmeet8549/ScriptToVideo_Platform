@@ -42,6 +42,10 @@ export default function ProjectsList() {
   // Handle Quick Create
   const handleQuickCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setAuthView('login');
+      return;
+    }
     if (!quickPrompt.trim() || createMutation.isPending) return;
 
     // Generate a default title from the prompt
@@ -173,7 +177,13 @@ export default function ProjectsList() {
         </div>
 
         <button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            if (!user) {
+              setAuthView('login');
+            } else {
+              setIsCreateModalOpen(true);
+            }
+          }}
           className="inline-flex items-center gap-1.5 rounded-full bg-black text-white hover:bg-neutral-800 text-xs font-bold px-5 py-3 transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" />

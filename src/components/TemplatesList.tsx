@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useAppStore } from '@/store/store';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,9 @@ import {
 } from 'lucide-react';
 
 export default function TemplatesList() {
-  const { setIsCreateModalOpen, setPrefilledProjectData } = useAppStore();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const { setIsCreateModalOpen, setPrefilledProjectData, setAuthView } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | string>('ALL');
 
@@ -139,6 +142,10 @@ export default function TemplatesList() {
     prefillRatio: '16:9' | '9:16' | '1:1';
     prefillVoice: string;
   }) => {
+    if (!user) {
+      setAuthView('login');
+      return;
+    }
     setPrefilledProjectData({
       name: `${template.title} - Draft`,
       prompt: template.prefillPrompt,
@@ -183,8 +190,12 @@ export default function TemplatesList() {
 
         <button
           onClick={() => {
-            setPrefilledProjectData(null);
-            setIsCreateModalOpen(true);
+            if (!user) {
+              setAuthView('login');
+            } else {
+              setPrefilledProjectData(null);
+              setIsCreateModalOpen(true);
+            }
           }}
           className="inline-flex items-center gap-1.5 rounded-full bg-black text-white hover:bg-neutral-800 text-xs font-bold px-5 py-3 transition-colors shadow-sm"
         >
