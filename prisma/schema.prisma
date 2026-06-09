@@ -1,0 +1,225 @@
+// Prisma Schema — ScriptForge AI
+// Database: PostgreSQL (Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// AUTH MODELS (required by @auth/prisma-adapter)
+// ─────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────
+// CORE APPLICATION MODELS
+// ─────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  emailVerified DateTime?
+  image        String?
+  passwordHash String?   // null for OAuth users
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts          Account[]
+  sessions          Session[]
+  projects          Project[]
+  generationHistory GenerationHistory[]
+  apiKeys           ApiKey[]
+  providerKeys      ProviderKey[]
+  settings          UserSettings?
+}
+
+model Project {
+  id          String  @id @default(cuid())
+  name        String
+  prompt      String  @db.Text
+  status      ProjectStatus @default(DRAFT)
+  step        ProjectStep   @default(IDEA)
+
+  // Generated content
+  scriptText  String? @db.Text
+  voiceAccent String?
+  videoRatio  VideoRatio?
+  videoUrl    String?
+  duration    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  scripts           Script[]
+  voices            Voice[]
+  generationHistory GenerationHistory[]
+}
+
+model Script {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  version   Int      @default(1)
+  tone      String?
+  language  String   @default("en")
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Voice {
+  id       String  @id @default(cuid())
+  accent   String
+  audioUrl String?
+  duration String?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model GenerationHistory {
+  id       String             @id @default(cuid())
+  type     GenerationType
+  status   GenerationStatus   @default(PENDING)
+  metadata Json?              // flexible JSON for provider responses, token counts, etc.
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  name      String
+  keyHash   String    @unique    // bcrypt hash of the actual key
+  keyPrefix String               // first 8 chars shown in UI e.g. "sk_live_"
+  scopes    String[]  @default(["read", "write"])
+  lastUsed  DateTime?
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProviderKey {
+  id        String   @id @default(cuid())
+  provider  String   // "NVIDIA", "ELEVENLABS", "HEYGEN"
+  value     String   // Encrypted API key value
+  lastFour  String   // Last 4 characters (e.g. to show mask)
+  prefix    String?  // Prefix (e.g., nvapi-, sk_)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+model UserSettings {
+  id              String   @id @default(cuid())
+  username        String?
+  bio             String?
+  defaultLanguage String   @default("English (US)")
+  defaultDuration String   @default("30 Seconds")
+  defaultTone     String   @default("Professional")
+  theme           String   @default("System")
+  
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum ProjectStatus {
+  DRAFT
+  SCRIPTING
+  VOICING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+enum ProjectStep {
+  IDEA
+  SCRIPT
+  VOICE
+  VIDEO
+}
+
+enum VideoRatio {
+  RATIO_16_9 @map("16:9")
+  RATIO_9_16 @map("9:16")
+  RATIO_1_1  @map("1:1")
+}
+
+enum GenerationType {
+  SCRIPT
+  VOICE
+  VIDEO
+}
+
+enum GenerationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
