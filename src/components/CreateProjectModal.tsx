@@ -34,7 +34,7 @@ const createProjectSchema = z.object({
 type FormData = z.infer<typeof createProjectSchema>;
 
 export default function CreateProjectModal() {
-  const { isCreateModalOpen, setIsCreateModalOpen, prefilledProjectData, setPrefilledProjectData } = useAppStore();
+  const { isCreateModalOpen, setIsCreateModalOpen, prefilledProjectData, setPrefilledProjectData, openProject } = useAppStore();
   const createProject = useCreateProject();
 
   const {
@@ -74,7 +74,7 @@ export default function CreateProjectModal() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      await createProject.mutateAsync({
+      const res = await createProject.mutateAsync({
         name: data.name,
         prompt: data.prompt,
         videoRatio: ratioMap[data.videoRatio],
@@ -82,6 +82,9 @@ export default function CreateProjectModal() {
       setIsCreateModalOpen(false);
       setPrefilledProjectData(null);
       reset();
+      if (res?.project?.id) {
+        openProject(res.project.id);
+      }
     } catch (error) {
       // Error is handled by the mutation's onError — form stays open
       console.error('[CreateProjectModal] Failed:', error);

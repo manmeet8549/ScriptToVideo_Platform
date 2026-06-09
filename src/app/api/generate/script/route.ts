@@ -80,6 +80,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    let userPromptContent = `Write a video script about: ${project.prompt}`;
+    try {
+      if (project.prompt.startsWith('{') && project.prompt.endsWith('}')) {
+        const parsed = JSON.parse(project.prompt);
+        userPromptContent = `Write a video script based on the following details:
+- Concept/Topic: ${parsed.concept || 'Not specified'}
+- Target Audience: ${parsed.audience || 'General Public'}
+- Tone/Style: ${parsed.tone || 'Engaging'}
+- Estimated Duration: ${parsed.duration || 'Not specified'}`;
+      }
+    } catch (e) {
+      // Fallback to raw prompt
+    }
+
     // 4. Call NVIDIA NIM
     const nimResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
@@ -91,7 +105,7 @@ export async function POST(request: NextRequest) {
         model: 'meta/llama-3.1-70b-instruct',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `Write a video script about: ${project.prompt}` },
+          { role: 'user', content: userPromptContent },
         ],
         max_tokens: 1024,
         temperature: 0.75,
