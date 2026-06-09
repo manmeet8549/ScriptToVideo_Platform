@@ -8,6 +8,7 @@ import ProjectsList from '@/components/ProjectsList';
 import TemplatesList from '@/components/TemplatesList';
 import ApiKeysSection from '@/components/ApiKeysSection';
 import SettingsSection from '@/components/SettingsSection';
+import ProjectPipeline from '@/components/ProjectPipeline';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import AuthScreen from '@/components/AuthScreen';
 
@@ -23,7 +24,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Home() {
-  const { activeTab, setActiveTab, authView, setIsCreateModalOpen, setAuthView } = useAppStore();
+  const { activeTab, setActiveTab, authView, setIsCreateModalOpen, setAuthView, openProject } = useAppStore();
   const { data: session, status } = useSession();
   const user = session?.user;
   // Fetch projects for dashboard list
@@ -401,7 +402,7 @@ export default function Home() {
                         return (
                           <Card 
                             key={project.id}
-                            onClick={() => setActiveTab('projects')}
+                            onClick={() => openProject(project.id)}
                             className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between h-44"
                           >
                             <CardContent className="p-0 flex flex-col justify-between h-full space-y-4">
@@ -458,6 +459,18 @@ export default function Home() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 <ProjectsList />
+              </motion.div>
+            )}
+
+            {/* 2b. Pipeline Tab — project detail with generation steps */}
+            {activeTab === 'pipeline' && (
+              <motion.div
+                key="pipeline"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <ProjectPipeline />
               </motion.div>
             )}
 

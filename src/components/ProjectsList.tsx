@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 export default function ProjectsList() {
-  const { searchQuery, setSearchQuery, setAuthView, setIsCreateModalOpen } = useAppStore();
+  const { searchQuery, setSearchQuery, setAuthView, setIsCreateModalOpen, openProject } = useAppStore();
   const { data: session } = useSession();
   const user = session?.user;
 
@@ -39,7 +39,6 @@ export default function ProjectsList() {
   const updateMutation = useUpdateProject();
 
   // Component states
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'DRAFT' | 'SCRIPT' | 'VOICE' | 'VIDEO'>('ALL');
   const [sortOption, setSortOption] = useState<'UPDATED' | 'NAME' | 'CREATED'>('UPDATED');
   const [quickPrompt, setQuickPrompt] = useState('');
@@ -308,7 +307,7 @@ export default function ProjectsList() {
                   if (!user) {
                     setAuthView('login');
                   } else {
-                    setSelectedProject(project);
+                    openProject(project.id);
                   }
                 }}
                 className="bg-neutral-100 h-44 relative flex items-center justify-center cursor-pointer border-b border-gray-50 overflow-hidden"
@@ -370,7 +369,7 @@ export default function ProjectsList() {
                         if (!user) {
                           setAuthView('login');
                         } else {
-                          setSelectedProject(project);
+                          openProject(project.id);
                         }
                       }}
                       className="text-xs font-bold text-black hover:underline cursor-pointer"
@@ -429,89 +428,7 @@ export default function ProjectsList() {
         </div>
       )}
 
-      {/* Video Preview Dialogue */}
-      <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-        {selectedProject && (
-          <DialogContent className="sm:max-w-[700px] rounded-[32px] p-6 border border-gray-100 bg-white shadow-2xl overflow-hidden">
-            <DialogHeader className="mb-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-100">
-                  <CheckCircle2 className="h-3 w-3" /> Ready
-                </span>
-                <span className="text-xs text-gray-400 font-sans">
-                  ID: {selectedProject.id}
-                </span>
-              </div>
-              <DialogTitle className="text-xl font-bold text-black font-sans mt-1 leading-tight">
-                {selectedProject.name}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500 font-sans line-clamp-1 mt-0.5">
-                {selectedProject.prompt}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-              
-              {/* Left Column: Video player */}
-              <div className="md:col-span-7 flex flex-col justify-center rounded-2xl bg-neutral-900 overflow-hidden relative border border-neutral-800 shadow-inner min-h-[260px] md:min-h-auto">
-                {selectedProject.videoUrl ? (
-                  <video 
-                    src={selectedProject.videoUrl} 
-                    controls 
-                    className="w-full h-full object-cover max-h-[350px]"
-                    autoPlay
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-8 text-center text-neutral-400">
-                    <Video className="h-12 w-12 text-neutral-600 mb-3 animate-pulse" />
-                    <span className="text-sm font-semibold">Video file is not available</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column: Scripts & parameters */}
-              <div className="md:col-span-5 flex flex-col justify-between space-y-4">
-                <div className="space-y-3">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Generated Script</span>
-                  <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-3 max-h-[160px] overflow-y-auto text-xs leading-relaxed text-gray-600 font-mono whitespace-pre-line">
-                    {selectedProject.scriptText || "No script text generated."}
-                  </div>
-                </div>
-
-                {/* Configurations parameters */}
-                <div className="space-y-2">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Details</span>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg bg-gray-50 p-2 border border-gray-100">
-                      <span className="text-[10px] text-gray-400 block font-semibold">Voice Model</span>
-                      <span className="font-semibold text-gray-700 font-sans truncate block">{selectedProject.voiceAccent || 'Default'}</span>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 p-2 border border-gray-100">
-                      <span className="text-[10px] text-gray-400 block font-semibold">Duration</span>
-                      <span className="font-semibold text-gray-700 font-sans block">{selectedProject.duration || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  {selectedProject.videoUrl && (
-                    <a
-                      href={selectedProject.videoUrl}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 inline-flex items-center justify-center rounded-xl bg-black text-white hover:bg-neutral-800 text-xs font-semibold py-2.5 transition-colors"
-                    >
-                      Download Video
-                    </a>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
     </div>
   );
 }
+

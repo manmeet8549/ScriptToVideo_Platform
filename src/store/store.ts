@@ -6,7 +6,8 @@ import { persist } from 'zustand/middleware';
 
 interface AppState {
   // ─── UI State ──────────────────────────────────────────────────────────────
-  activeTab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings';
+  activeTab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline';
+  selectedProjectId: string | null;
   searchQuery: string;
   isCreateModalOpen: boolean;
 
@@ -22,7 +23,9 @@ interface AppState {
   authView: 'login' | 'signup' | null;
 
   // ─── Actions ───────────────────────────────────────────────────────────────
-  setActiveTab: (tab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings') => void;
+  setActiveTab: (tab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline') => void;
+  setSelectedProjectId: (id: string | null) => void;
+  openProject: (id: string) => void;
   setSearchQuery: (query: string) => void;
   setIsCreateModalOpen: (open: boolean) => void;
   setAuthView: (view: 'login' | 'signup' | null) => void;
@@ -34,6 +37,7 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       // Initial state
       activeTab: 'dashboard',
+      selectedProjectId: null,
       searchQuery: '',
       isCreateModalOpen: false,
       authView: null,
@@ -41,6 +45,8 @@ export const useAppStore = create<AppState>()(
 
       // Actions
       setActiveTab: (tab) => set({ activeTab: tab }),
+      setSelectedProjectId: (id) => set({ selectedProjectId: id }),
+      openProject: (id) => set({ activeTab: 'pipeline', selectedProjectId: id }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setIsCreateModalOpen: (open) => set({ isCreateModalOpen: open }),
       setAuthView: (view) => set({ authView: view }),
@@ -50,7 +56,8 @@ export const useAppStore = create<AppState>()(
       name: 'scriptforge-ui-store',
       // Only persist non-auth UI state
       partialize: (state) => ({
-        activeTab: state.activeTab,
+        activeTab: state.activeTab === 'pipeline' ? 'dashboard' : state.activeTab,
+        selectedProjectId: null, // never persist the open project — always start at dashboard
         searchQuery: state.searchQuery,
         isCreateModalOpen: state.isCreateModalOpen,
         prefilledProjectData: state.prefilledProjectData,
