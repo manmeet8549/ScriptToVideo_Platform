@@ -345,7 +345,7 @@ export default function ProjectsList() {
 
                 <div className="space-y-3 pt-2">
                   {/* Metadata line */}
-                  <div className="text-[10px] text-gray-400 font-medium font-sans flex items-center gap-1.5">
+                  <div className="text-[10px] text-gray-400 font-medium font-sans flex flex-wrap items-center gap-1.5">
                     <span>Updated {getRelativeTime(project.updatedAt)}</span>
                     <span>•</span>
                     <span>{project.duration || '--'}</span>

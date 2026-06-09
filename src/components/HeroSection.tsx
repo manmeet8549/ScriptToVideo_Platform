@@ -46,7 +46,7 @@ export default function HeroSection() {
   return (
     <section className="relative flex flex-col items-center justify-center py-20 text-center px-6 lg:px-8">
       {/* Background gradient */}
-      <div className="absolute top-1/2 left-1/2 -z-10 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-tr from-neutral-100 to-neutral-50/20 blur-3xl opacity-60" />
+      <div className="absolute top-1/2 left-1/2 -z-10 h-[400px] w-full max-w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-tr from-neutral-100 to-neutral-50/20 blur-3xl opacity-60" />
 
       {/* Pulse Badge */}
       <motion.div
