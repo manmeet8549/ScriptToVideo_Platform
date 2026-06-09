@@ -71,7 +71,7 @@ export async function GET() {
     return NextResponse.json({
       fullName: user.name || '',
       email: user.email,
-      avatarUrl: user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}&mouth=smile`,
+      avatarUrl: user.image || '/avatars/male.svg',
       settings: {
         username: settings.username || '',
         bio: settings.bio || '',

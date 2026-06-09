@@ -52,7 +52,7 @@ export default function SettingsSection() {
         defaultDuration: userData.settings?.defaultDuration || '30 Seconds',
         defaultTone: userData.settings?.defaultTone || 'Professional',
         theme: (userData.settings?.theme as 'System' | 'Light' | 'Dark') || 'System',
-        avatarUrl: userData.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email || 'Felix'}&mouth=smile`,
+        avatarUrl: userData.avatarUrl || '/avatars/male.svg',
       };
       setForm(initial);
       setInitialForm(initial);
@@ -153,7 +153,7 @@ export default function SettingsSection() {
                 <div className="relative group">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={form.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.email || 'Felix'}&mouth=smile`}
+                    src={form.avatarUrl || '/avatars/male.svg'}
                     alt="Profile Avatar"
                     className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md transition-opacity duration-300 group-hover:opacity-85 animate-fade-in"
                   />
@@ -185,9 +185,9 @@ export default function SettingsSection() {
                   <div className="flex gap-2.5">
                     <button
                       type="button"
-                      onClick={() => handleInputChange('avatarUrl', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile')}
+                      onClick={() => handleInputChange('avatarUrl', '/avatars/male.svg')}
                       className={`h-9 w-9 rounded-full overflow-hidden border-2 transition-all p-0.5 hover:scale-105 hover:shadow-sm ${
-                        form.avatarUrl === 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile'
+                        form.avatarUrl === '/avatars/male.svg'
                           ? 'border-black ring-2 ring-black/10 scale-105'
                           : 'border-neutral-200 hover:border-neutral-400'
                       }`}
@@ -195,16 +195,16 @@ export default function SettingsSection() {
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&mouth=smile"
+                        src="/avatars/male.svg"
                         alt="Male Preset"
                         className="h-full w-full rounded-full object-cover"
                       />
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleInputChange('avatarUrl', 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&mouth=smile')}
+                      onClick={() => handleInputChange('avatarUrl', '/avatars/female.svg')}
                       className={`h-9 w-9 rounded-full overflow-hidden border-2 transition-all p-0.5 hover:scale-105 hover:shadow-sm ${
-                        form.avatarUrl === 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&mouth=smile'
+                        form.avatarUrl === '/avatars/female.svg'
                           ? 'border-black ring-2 ring-black/10 scale-105'
                           : 'border-neutral-200 hover:border-neutral-400'
                       }`}
@@ -212,7 +212,7 @@ export default function SettingsSection() {
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&mouth=smile"
+                        src="/avatars/female.svg"
                         alt="Female Preset"
                         className="h-full w-full rounded-full object-cover"
                       />

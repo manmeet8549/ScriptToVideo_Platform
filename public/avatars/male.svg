@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <!-- Circular Background with Black Outline -->
+  <circle cx="100" cy="100" r="90" fill="#e9eff5" stroke="#1e293b" stroke-width="6"/>
+  
+  <!-- Neck -->
+  <path d="M84 110 L84 150 L116 150 L116 110 Z" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+  <!-- Neck Shadow -->
+  <path d="M84 110 Q100 120 116 110 L116 116 Q100 126 84 116 Z" fill="#e2a58b" opacity="0.6"/>
+
+  <!-- Ears -->
+  <circle cx="62" cy="98" r="9" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+  <circle cx="138" cy="98" r="9" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+
+  <!-- Head -->
+  <ellipse cx="100" cy="94" rx="35" ry="42" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+  
+  <!-- Cover inner ear/head outlines where they intersect -->
+  <circle cx="62" cy="98" r="6.5" fill="#fbc0a4"/>
+  <circle cx="138" cy="98" r="6.5" fill="#fbc0a4"/>
+  <ellipse cx="100" cy="94" rx="32.5" ry="39.5" fill="#fbc0a4"/>
+
+  <!-- Male Hair (Brown cap, sideburns, and clean side sweep) -->
+  <path d="M60 88 
+           C56 70, 64 45, 100 45 
+           C136 45, 144 70, 140 88 
+           C144 80, 143 62, 133 52 
+           C123 42, 114 40, 100 40 
+           C86 40, 77 42, 67 52 
+           C57 62, 56 80, 60 88 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+  <!-- Front Bangs / Forehead sweep -->
+  <path d="M60 76 
+           C65 65, 80 62, 95 65 
+           C110 68, 125 58, 138 72 
+           C126 66, 114 68, 106 72 
+           C98 76, 82 72, 70 76 
+           C65 78, 60 76, 60 76 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Shirt (Navy Blue with V-neck cutout) -->
+  <path d="M34 185 C34 152, 65 138, 100 138 C135 138, 166 152, 166 185 L166 198 L34 198 Z" fill="#2e469e" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+  <!-- V-neck skin showing through -->
+  <path d="M78 138 Q100 166 122 138" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
+</svg>

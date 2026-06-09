@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <!-- Circular Background with Black Outline -->
+  <circle cx="100" cy="100" r="90" fill="#e9eff5" stroke="#1e293b" stroke-width="6"/>
+  
+  <!-- Back Hair (flared shoulders behind head/neck) -->
+  <path d="M54 110 C46 130, 48 152, 68 152 C76 152, 78 135, 76 110 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M146 110 C154 130, 152 152, 132 152 C124 152, 122 135, 124 110 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Neck -->
+  <path d="M84 110 L84 150 L116 150 L116 110 Z" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+  <!-- Neck Shadow -->
+  <path d="M84 110 Q100 120 116 110 L116 116 Q100 126 84 116 Z" fill="#e2a58b" opacity="0.6"/>
+
+  <!-- Ears -->
+  <circle cx="62" cy="98" r="9" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+  <circle cx="138" cy="98" r="9" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+
+  <!-- Head -->
+  <ellipse cx="100" cy="94" rx="35" ry="42" fill="#fbc0a4" stroke="#1e293b" stroke-width="5"/>
+  
+  <!-- Cover inner ear/head outlines where they intersect -->
+  <circle cx="62" cy="98" r="6.5" fill="#fbc0a4"/>
+  <circle cx="138" cy="98" r="6.5" fill="#fbc0a4"/>
+  <ellipse cx="100" cy="94" rx="32.5" ry="39.5" fill="#fbc0a4"/>
+
+  <!-- Female Hair - Bob/Flipped out style on top and sides -->
+  <path d="M58 88 
+           C54 62, 68 44, 100 44 
+           C132 44, 146 62, 142 88 
+           C146 76, 143 56, 133 46 
+           C123 38, 114 36, 100 36 
+           C86 36, 77 38, 67 46 
+           C57 56, 54 76, 58 88 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+  <!-- Front Bangs / forehead sweep parted at center/side -->
+  <path d="M58 76 
+           C64 65, 80 62, 98 68 
+           C112 62, 128 65, 142 76 
+           C130 68, 114 72, 104 74 
+           C94 76, 80 72, 68 76 
+           C63 78, 58 76, 58 76 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Shirt (Purple with V-neck cutout) -->
+  <path d="M34 185 C34 152, 65 138, 100 138 C135 138, 166 152, 166 185 L166 198 L34 198 Z" fill="#8b5cf6" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+  <!-- V-neck skin showing through -->
+  <path d="M78 138 Q100 166 122 138" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round"/>
+</svg>
