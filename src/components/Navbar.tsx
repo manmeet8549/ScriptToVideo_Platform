@@ -68,14 +68,16 @@ export default function Navbar() {
 
         {/* Mobile Menu Button & Logo Group */}
         <div className="flex items-center gap-3">
-          {/* Hamburger Menu (Mobile Only) */}
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="md:hidden flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-            aria-label="Open mobile menu"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
+          {/* Hamburger Menu (Mobile Only) - Only show when logged in */}
+          {user && (
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden flex items-center justify-center h-10 w-10 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              aria-label="Open mobile menu"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+          )}
 
           {/* Logo */}
           <button
@@ -193,7 +195,7 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Drawer Overlay */}
-      {isMobileMenuOpen && (
+      {user && isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
           {/* Backdrop */}
           <div 
