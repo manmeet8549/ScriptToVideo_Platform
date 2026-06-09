@@ -19,21 +19,14 @@
   <circle cx="138" cy="98" r="6.5" fill="#fbc0a4"/>
   <ellipse cx="100" cy="94" rx="32.5" ry="39.5" fill="#fbc0a4"/>
 
-  <!-- Male Hair (Brown cap, sideburns, and clean side sweep) -->
-  <path d="M60 88 
-           C56 70, 64 45, 100 45 
-           C136 45, 144 70, 140 88 
-           C144 80, 143 62, 133 52 
-           C123 42, 114 40, 100 40 
-           C86 40, 77 42, 67 52 
-           C57 62, 56 80, 60 88 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
-  <!-- Front Bangs / Forehead sweep -->
-  <path d="M60 76 
-           C65 65, 80 62, 95 65 
-           C110 68, 125 58, 138 72 
-           C126 66, 114 68, 106 72 
-           C98 76, 82 72, 70 76 
-           C65 78, 60 76, 60 76 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
+  <!-- Male Hair (Clean cap and sideburns, exposed forehead) -->
+  <path d="M60 90 
+           C58 78, 75 70, 100 70 
+           C125 70, 142 78, 140 90 
+           C144 90, 146 60, 135 48 
+           C124 38, 100 38, 100 38 
+           C100 38, 76 38, 65 48 
+           C54 60, 56 90, 60 90 Z" fill="#4a3728" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
 
   <!-- Shirt (Navy Blue with V-neck cutout) -->
   <path d="M34 185 C34 152, 65 138, 100 138 C135 138, 166 152, 166 185 L166 198 L34 198 Z" fill="#2e469e" stroke="#1e293b" stroke-width="5" stroke-linejoin="round"/>
