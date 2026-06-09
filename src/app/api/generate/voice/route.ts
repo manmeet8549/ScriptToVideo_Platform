@@ -29,6 +29,7 @@ const ELEVENLABS_VOICES = {
   'arnold':   'VR6AewLTigWG4xSOukaG', // Crisp, confident male
   'adam':     'pNInz6obpgDQGcFmaJgB', // Deep, American male
   'sam':      'yoZ06aMxZJJ28mfd3POQ', // Raspy, bold male
+  'munish':   'yTmS7gBZincbjEfc9hnC', // Special character custom voice
 } as const;
 
 export async function POST(request: NextRequest) {

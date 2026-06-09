@@ -65,6 +65,13 @@ const PREMIUM_VOICES = [
     avatarLetter: 'M'
   },
   {
+    id: 'yTmS7gBZincbjEfc9hnC', // Custom Voice
+    name: 'Munish Mittal',
+    role: 'Premium Male · Special Character',
+    badges: ['SPECIAL', 'CUSTOM'],
+    avatarLetter: 'M'
+  },
+  {
     id: 'EXAVITQu4vr4xnSDxMaL', // Rachel (Default Warm Female)
     name: 'Elena',
     role: 'Friendly Female · Conversational',
