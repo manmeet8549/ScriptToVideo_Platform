@@ -181,8 +181,8 @@ export default function ProjectPipeline() {
     selectedProjectId ?? ''
   );
 
-  // Active step navigation (1 to 5)
-  const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null);
+  // Active step navigation (1 to 5) from Zustand store
+  const { activeStepIndex, setActiveStepIndex } = useAppStore();
 
   // Step state status map
   const [stepStatus, setStepStatus] = useState<Record<string, 'idle' | 'loading' | 'done' | 'error'>>({
@@ -269,7 +269,7 @@ export default function ProjectPipeline() {
       }
       setActiveStepIndex(step);
     }
-  }, [project, activeStepIndex]);
+  }, [project, activeStepIndex, setActiveStepIndex]);
 
   // Load avatar profiles on step 4
   useEffect(() => {
@@ -317,7 +317,7 @@ export default function ProjectPipeline() {
         setVideoPollingActive(false);
       }
     } catch { /* fail safe polling */ }
-  }, [selectedProjectId, queryClient]);
+  }, [selectedProjectId, queryClient, setActiveStepIndex]);
 
   useEffect(() => {
     if (videoPollingActive) {

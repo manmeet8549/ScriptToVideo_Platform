@@ -8,6 +8,7 @@ interface AppState {
   // ─── UI State ──────────────────────────────────────────────────────────────
   activeTab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline';
   selectedProjectId: string | null;
+  activeStepIndex: number | null;
   searchQuery: string;
   isCreateModalOpen: boolean;
 
@@ -25,6 +26,7 @@ interface AppState {
   // ─── Actions ───────────────────────────────────────────────────────────────
   setActiveTab: (tab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline') => void;
   setSelectedProjectId: (id: string | null) => void;
+  setActiveStepIndex: (step: number | null) => void;
   openProject: (id: string) => void;
   setSearchQuery: (query: string) => void;
   setIsCreateModalOpen: (open: boolean) => void;
@@ -38,6 +40,7 @@ export const useAppStore = create<AppState>()(
       // Initial state
       activeTab: 'dashboard',
       selectedProjectId: null,
+      activeStepIndex: null,
       searchQuery: '',
       isCreateModalOpen: false,
       authView: null,
@@ -46,7 +49,8 @@ export const useAppStore = create<AppState>()(
       // Actions
       setActiveTab: (tab) => set({ activeTab: tab }),
       setSelectedProjectId: (id) => set({ selectedProjectId: id }),
-      openProject: (id) => set({ activeTab: 'pipeline', selectedProjectId: id }),
+      setActiveStepIndex: (step) => set({ activeStepIndex: step }),
+      openProject: (id) => set({ activeTab: 'pipeline', selectedProjectId: id, activeStepIndex: null }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setIsCreateModalOpen: (open) => set({ isCreateModalOpen: open }),
       setAuthView: (view) => set({ authView: view }),

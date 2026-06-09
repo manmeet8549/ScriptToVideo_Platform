@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
@@ -25,10 +25,161 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Home() {
-  const { activeTab, setActiveTab, authView, setIsCreateModalOpen, setAuthView, openProject } = useAppStore();
+  const { 
+    activeTab, setActiveTab, 
+    selectedProjectId, setSelectedProjectId,
+    activeStepIndex, setActiveStepIndex,
+    authView, setAuthView,
+    setIsCreateModalOpen, openProject 
+  } = useAppStore();
   const { data: session, status } = useSession();
   const user = session?.user;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // ─── Browser History & URL Syncing ──────────────────────────────────────────
+  const isUrlUpdatingStateRef = useRef(false);
+  const isInitializedRef = useRef(false);
+
+  // 1. Sync from URL to Zustand store on Mount
+  useEffect(() => {
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    const projectParam = params.get('project');
+    const stepParam = params.get('step') ? parseInt(params.get('step') || '') : null;
+    const authParam = params.get('auth');
+
+    isUrlUpdatingStateRef.current = true;
+
+    // Default or parsed tab
+    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline'] as const;
+    type TabType = typeof validTabs[number];
+    if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
+      setActiveTab(tabParam as TabType);
+    } else {
+      setActiveTab('dashboard');
+    }
+
+    // Project and step parameters
+    setSelectedProjectId(projectParam || null);
+    if (stepParam && stepParam >= 1 && stepParam <= 5) {
+      setActiveStepIndex(stepParam);
+    } else {
+      setActiveStepIndex(null);
+    }
+
+    // Auth screen parameters
+    setAuthView(authParam === 'login' || authParam === 'signup' ? authParam : null);
+
+    // Initial state rewrite in history
+    const initialParams = new URLSearchParams();
+    initialParams.set('tab', tabParam || 'dashboard');
+    if (projectParam) initialParams.set('project', projectParam);
+    if (stepParam) initialParams.set('step', String(stepParam));
+    if (authParam) initialParams.set('auth', authParam);
+
+    window.history.replaceState(
+      {
+        activeTab: tabParam || 'dashboard',
+        selectedProjectId: projectParam || null,
+        activeStepIndex: stepParam || null,
+        authView: authParam || null,
+      },
+      '',
+      window.location.pathname + (initialParams.toString() ? `?${initialParams.toString()}` : '')
+    );
+
+    setTimeout(() => {
+      isUrlUpdatingStateRef.current = false;
+    }, 50);
+  }, [setActiveTab, setSelectedProjectId, setActiveStepIndex, setAuthView]);
+
+  // 2. Sync from Zustand state changes to browser URL/History
+  useEffect(() => {
+    if (isUrlUpdatingStateRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const currentTab = params.get('tab');
+    const currentProject = params.get('project');
+    const currentStep = params.get('step') ? parseInt(params.get('step') || '') : null;
+    const currentAuth = params.get('auth');
+
+    // Mismatches
+    const tabMismatch = currentTab !== activeTab;
+    const projectMismatch = currentProject !== selectedProjectId;
+    const stepMismatch = currentStep !== activeStepIndex;
+    const authMismatch = currentAuth !== authView;
+
+    if (tabMismatch || projectMismatch || stepMismatch || authMismatch) {
+      const newParams = new URLSearchParams();
+      if (activeTab) newParams.set('tab', activeTab);
+      if (selectedProjectId) newParams.set('project', selectedProjectId);
+      if (activeStepIndex !== null && activeStepIndex !== undefined) {
+        newParams.set('step', String(activeStepIndex));
+      }
+      if (authView) newParams.set('auth', authView);
+
+      const newSearch = newParams.toString() ? `?${newParams.toString()}` : '';
+
+      window.history.pushState(
+        {
+          activeTab,
+          selectedProjectId,
+          activeStepIndex,
+          authView,
+        },
+        '',
+        window.location.pathname + newSearch
+      );
+    }
+  }, [activeTab, selectedProjectId, activeStepIndex, authView]);
+
+  // 3. Handle Popstate (browser Back/Forward buttons)
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      isUrlUpdatingStateRef.current = true;
+
+      const state = event.state;
+      if (state) {
+        setActiveTab(state.activeTab || 'dashboard');
+        setSelectedProjectId(state.selectedProjectId || null);
+        setActiveStepIndex(state.activeStepIndex || null);
+        setAuthView(state.authView || null);
+      } else {
+        // Fallback: parse URL
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        const projectParam = params.get('project');
+        const stepParam = params.get('step') ? parseInt(params.get('step') || '') : null;
+        const authParam = params.get('auth');
+
+        const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline'] as const;
+        type TabType = typeof validTabs[number];
+        if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
+          setActiveTab(tabParam as TabType);
+        } else {
+          setActiveTab('dashboard');
+        }
+        setSelectedProjectId(projectParam || null);
+        if (stepParam && stepParam >= 1 && stepParam <= 5) {
+          setActiveStepIndex(stepParam);
+        } else {
+          setActiveStepIndex(null);
+        }
+        setAuthView(authParam === 'login' || authParam === 'signup' ? authParam : null);
+      }
+
+      setTimeout(() => {
+        isUrlUpdatingStateRef.current = false;
+      }, 50);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [setActiveTab, setSelectedProjectId, setActiveStepIndex, setAuthView]);
+
   // Fetch projects for dashboard list
   const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
 
