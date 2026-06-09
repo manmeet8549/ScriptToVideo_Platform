@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export default function TemplatesList() {
-  const { setIsCreateModalOpen } = useAppStore();
+  const { setIsCreateModalOpen, setPrefilledProjectData } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | string>('ALL');
 
@@ -34,20 +34,32 @@ export default function TemplatesList() {
     {
       title: 'YouTube Shorts',
       duration: '60s',
-      description: 'High-engagement vertical format',
-      category: 'YouTube Shorts'
+      description: 'High-engagement vertical format perfect for quick storytelling.',
+      category: 'YouTube Shorts',
+      imageUrl: '/images/ai_shorts_thumbnail.png',
+      prefillPrompt: 'Generate a high-engagement vertical formatting script for YouTube Shorts focusing on a fast-paced, interesting fact or quick storytelling concept.',
+      prefillRatio: '9:16' as const,
+      prefillVoice: 'US Female - Emily'
     },
     {
       title: 'Product Demo',
       duration: '2m',
-      description: 'Showcase features clearly',
-      category: 'Product Demo'
+      description: 'Showcase features clearly and present key value propositions.',
+      category: 'Product Demo',
+      imageUrl: '/images/product_demo_thumbnail.png',
+      prefillPrompt: 'Create a clean explainer script showing key features and benefits of a new software product, highlighting the ease of use and user interface.',
+      prefillRatio: '16:9' as const,
+      prefillVoice: 'US Male - Arthur'
     },
     {
       title: 'Explainer Video',
       duration: '90s',
-      description: 'Simplify complex concepts',
-      category: 'Explainer'
+      description: 'Simplify complex concepts using engaging analogies and explanations.',
+      category: 'Explainer',
+      imageUrl: '/images/explainer_video_thumbnail.png',
+      prefillPrompt: 'A detailed explainer video script simplifying a complex concept, focusing on educational clarity, diagrams, and easy-to-understand analogies.',
+      prefillRatio: '16:9' as const,
+      prefillVoice: 'UK Female - Charlotte'
     }
   ];
 
@@ -58,46 +70,81 @@ export default function TemplatesList() {
       duration: '30-60 sec',
       icon: Video,
       badges: ['Easy', 'Creator Friendly'],
-      category: 'Marketing'
+      category: 'Marketing',
+      imageUrl: '/images/product_launch_thumbnail.png',
+      prefillPrompt: 'Generate a product launch teaser script introducing a new, innovative product. Focus on excitement, problem-solution format, and key features.',
+      prefillRatio: '16:9' as const,
+      prefillVoice: 'US Male - Arthur'
     },
     {
       title: 'Educational Lesson',
       duration: '3-5 min',
       icon: GraduationCap,
       badges: ['Medium'],
-      category: 'Educational'
+      category: 'Educational',
+      imageUrl: '/images/educational_lesson_thumbnail.png',
+      prefillPrompt: 'Create an educational lecture script explaining a scientific concept. Keep the tone engaging, clear, and easy for students to follow.',
+      prefillRatio: '16:9' as const,
+      prefillVoice: 'UK Male - George'
     },
     {
       title: 'Business Presentation',
       duration: '5-10 min',
       icon: TrendingUp,
       badges: ['Advanced'],
-      category: 'Business'
+      category: 'Business',
+      imageUrl: '/images/business_presentation_thumbnail.png',
+      prefillPrompt: 'Generate a professional corporate presentation script summarizing quarterly achievements, strategy overview, and future target metrics.',
+      prefillRatio: '16:9' as const,
+      prefillVoice: 'UK Male - George'
     },
     {
       title: 'Social Media Reel',
       duration: '15-30 sec',
       icon: Smartphone,
       badges: ['Easy', 'Creator Friendly'],
-      category: 'Social Media'
+      category: 'Social Media',
+      imageUrl: '/images/social_media_reel_thumbnail.png',
+      prefillPrompt: 'Create a highly engaging, fast-paced portrait aspect ratio script for Instagram/TikTok reels showcasing a daily vlog or tips.',
+      prefillRatio: '9:16' as const,
+      prefillVoice: 'US Female - Emily'
     },
     {
       title: 'Startup Pitch',
       duration: '2-3 min',
       icon: Rocket,
       badges: ['Medium'],
-      category: 'Business'
+      category: 'Business',
+      imageUrl: '/images/startup_pitch_thumbnail.png',
+      prefillPrompt: 'Create a compelling elevator pitch script for investors. Introduce the startup problem, unique solution, market size, and business model.',
+      prefillRatio: '16:9' as const,
+      prefillVoice: 'US Male - Arthur'
     },
     {
       title: 'AI Tool Review',
       duration: '3-5 min',
       icon: Lightbulb,
       badges: ['Medium', 'Creator Friendly'],
-      category: 'Explainer'
+      category: 'Explainer',
+      imageUrl: '/images/ai_tool_review_thumbnail.png',
+      prefillPrompt: 'Write a script review of a brand new AI tool, covering its key functionalities, real-world usefulness, pricing, and pros/cons.',
+      prefillRatio: '16:9' as const,
+      prefillVoice: 'UK Female - Charlotte'
     }
   ];
 
-  const handleUseTemplate = () => {
+  const handleUseTemplate = (template: {
+    title: string;
+    prefillPrompt: string;
+    prefillRatio: '16:9' | '9:16' | '1:1';
+    prefillVoice: string;
+  }) => {
+    setPrefilledProjectData({
+      name: `${template.title} - Draft`,
+      prompt: template.prefillPrompt,
+      videoRatio: template.prefillRatio,
+      voiceAccent: template.prefillVoice,
+    });
     setIsCreateModalOpen(true);
   };
 
@@ -135,7 +182,10 @@ export default function TemplatesList() {
         </div>
 
         <button
-          onClick={handleUseTemplate}
+          onClick={() => {
+            setPrefilledProjectData(null);
+            setIsCreateModalOpen(true);
+          }}
           className="inline-flex items-center gap-1.5 rounded-full bg-black text-white hover:bg-neutral-800 text-xs font-bold px-5 py-3 transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" />
@@ -190,10 +240,17 @@ export default function TemplatesList() {
                 key={t.title}
                 className="rounded-[32px] border border-gray-100 bg-white p-6 shadow-sm flex flex-col justify-between h-full space-y-5"
               >
-                {/* Gray preview container with play overlay */}
-                <div className="bg-neutral-100 h-40 rounded-2xl flex items-center justify-center relative">
-                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-white text-neutral-400 shadow-sm border border-neutral-100">
-                    <Play className="h-5 w-5 fill-neutral-400 stroke-none" />
+                {/* Visual Preview Container */}
+                <div className="relative h-44 rounded-2xl overflow-hidden bg-neutral-100 group border border-neutral-100">
+                  <img 
+                    src={t.imageUrl} 
+                    alt={t.title} 
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="h-12 w-12 flex items-center justify-center rounded-full bg-white/90 hover:bg-white text-black shadow-md border border-neutral-100/20 backdrop-blur-sm transition-all transform scale-90 group-hover:scale-100 duration-300">
+                      <Play className="h-5 w-5 fill-black stroke-none ml-0.5" />
+                    </div>
                   </div>
                 </div>
 
@@ -209,7 +266,7 @@ export default function TemplatesList() {
                   </div>
 
                   <Button
-                    onClick={handleUseTemplate}
+                    onClick={() => handleUseTemplate(t)}
                     className="w-full rounded-full bg-neutral-100 text-black hover:bg-neutral-200 border border-neutral-200/40 text-xs font-bold h-10 transition-colors"
                   >
                     Use Template
@@ -230,16 +287,24 @@ export default function TemplatesList() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredAll.map((t) => {
-              const Icon = t.icon;
               return (
                 <Card 
                   key={t.title}
-                  className="rounded-[32px] border border-gray-100 bg-white p-5 shadow-sm flex flex-col justify-between h-full space-y-4"
+                  className="rounded-[32px] border border-gray-100 bg-white p-5 shadow-sm flex flex-col justify-between h-full space-y-4 animate-in fade-in-50 duration-300"
                 >
-                  {/* Top rounded container with icon + duration */}
-                  <div className="bg-neutral-50 h-32 rounded-2xl flex flex-col justify-center items-center relative border border-neutral-100/40">
-                    <Icon className="h-7 w-7 text-neutral-400" />
-                    <span className="absolute bottom-3 right-3 text-[9px] font-bold text-gray-400 bg-white border border-gray-100 rounded-md px-1.5 py-0.5">
+                  {/* Top rounded container with image preview + play button */}
+                  <div className="relative h-36 rounded-2xl overflow-hidden bg-neutral-100 group border border-neutral-100/60">
+                    <img 
+                      src={t.imageUrl} 
+                      alt={t.title} 
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="h-10 w-10 flex items-center justify-center rounded-full bg-white/90 hover:bg-white text-black shadow-md border border-neutral-100/20 backdrop-blur-sm transition-all transform scale-90 group-hover:scale-100 duration-300">
+                        <Play className="h-4 w-4 fill-black stroke-none ml-0.5" />
+                      </div>
+                    </div>
+                    <span className="absolute bottom-3 right-3 text-[9px] font-bold text-gray-700 bg-white border border-gray-100 rounded-md px-1.5 py-0.5 z-10 shadow-sm">
                       {t.duration}
                     </span>
                   </div>
@@ -262,14 +327,14 @@ export default function TemplatesList() {
 
                     <div className="flex gap-2 pt-1.5">
                       <Button
-                        onClick={handleUseTemplate}
+                        onClick={() => handleUseTemplate(t)}
                         variant="outline"
                         className="flex-1 rounded-full border-gray-200 text-black hover:bg-gray-50 text-[11px] font-bold h-9 px-3"
                       >
                         Preview
                       </Button>
                       <Button
-                        onClick={handleUseTemplate}
+                        onClick={() => handleUseTemplate(t)}
                         className="flex-1 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold h-9 px-3 transition-colors"
                       >
                         Use
@@ -299,3 +364,4 @@ export default function TemplatesList() {
     </div>
   );
 }
+

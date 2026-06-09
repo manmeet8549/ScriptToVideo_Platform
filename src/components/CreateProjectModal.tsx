@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,7 +34,7 @@ const createProjectSchema = z.object({
 type FormData = z.infer<typeof createProjectSchema>;
 
 export default function CreateProjectModal() {
-  const { isCreateModalOpen, setIsCreateModalOpen } = useAppStore();
+  const { isCreateModalOpen, setIsCreateModalOpen, prefilledProjectData, setPrefilledProjectData } = useAppStore();
   const createProject = useCreateProject();
 
   const {
@@ -51,6 +52,26 @@ export default function CreateProjectModal() {
     },
   });
 
+  useEffect(() => {
+    if (isCreateModalOpen) {
+      if (prefilledProjectData) {
+        reset({
+          name: prefilledProjectData.name,
+          prompt: prefilledProjectData.prompt,
+          voiceAccent: prefilledProjectData.voiceAccent,
+          videoRatio: prefilledProjectData.videoRatio,
+        });
+      } else {
+        reset({
+          name: '',
+          prompt: '',
+          voiceAccent: 'US Female - Emily',
+          videoRatio: '16:9',
+        });
+      }
+    }
+  }, [isCreateModalOpen, prefilledProjectData, reset]);
+
   const onSubmit = async (data: FormData) => {
     try {
       await createProject.mutateAsync({
@@ -59,6 +80,7 @@ export default function CreateProjectModal() {
         videoRatio: ratioMap[data.videoRatio],
       });
       setIsCreateModalOpen(false);
+      setPrefilledProjectData(null);
       reset();
     } catch (error) {
       // Error is handled by the mutation's onError — form stays open
@@ -67,7 +89,11 @@ export default function CreateProjectModal() {
   };
 
   return (
-    <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+    <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
+      setIsCreateModalOpen(open);
+      if (!open) setPrefilledProjectData(null);
+    }}>
+
       <DialogContent className="sm:max-w-[500px] rounded-2xl p-6 border border-gray-100 bg-white shadow-2xl">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-xl font-bold font-sans tracking-tight flex items-center gap-2">
@@ -158,7 +184,7 @@ export default function CreateProjectModal() {
               type="button"
               variant="outline"
               disabled={createProject.isPending}
-              onClick={() => { setIsCreateModalOpen(false); reset(); }}
+              onClick={() => { setIsCreateModalOpen(false); setPrefilledProjectData(null); reset(); }}
               className="rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 font-sans"
             >
               Cancel

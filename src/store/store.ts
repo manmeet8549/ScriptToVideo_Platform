@@ -10,6 +10,14 @@ interface AppState {
   searchQuery: string;
   isCreateModalOpen: boolean;
 
+  // Prefill data for template creation
+  prefilledProjectData: {
+    name: string;
+    prompt: string;
+    videoRatio: '16:9' | '9:16' | '1:1';
+    voiceAccent: string;
+  } | null;
+
   // ─── Auth UI State (NOT persisted — always start at landing page) ──────────
   authView: 'login' | 'signup' | null;
 
@@ -18,6 +26,7 @@ interface AppState {
   setSearchQuery: (query: string) => void;
   setIsCreateModalOpen: (open: boolean) => void;
   setAuthView: (view: 'login' | 'signup' | null) => void;
+  setPrefilledProjectData: (data: { name: string; prompt: string; videoRatio: '16:9' | '9:16' | '1:1'; voiceAccent: string } | null) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -28,12 +37,14 @@ export const useAppStore = create<AppState>()(
       searchQuery: '',
       isCreateModalOpen: false,
       authView: null,
+      prefilledProjectData: null,
 
       // Actions
       setActiveTab: (tab) => set({ activeTab: tab }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setIsCreateModalOpen: (open) => set({ isCreateModalOpen: open }),
       setAuthView: (view) => set({ authView: view }),
+      setPrefilledProjectData: (data) => set({ prefilledProjectData: data }),
     }),
     {
       name: 'scriptforge-ui-store',
@@ -42,8 +53,10 @@ export const useAppStore = create<AppState>()(
         activeTab: state.activeTab,
         searchQuery: state.searchQuery,
         isCreateModalOpen: state.isCreateModalOpen,
+        prefilledProjectData: state.prefilledProjectData,
         // authView intentionally excluded — always start at landing page
       }),
     }
   )
 );
+
