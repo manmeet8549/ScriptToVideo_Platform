@@ -5,7 +5,7 @@ import { decrypt } from '@/lib/encryption';
 
 // Well-known ElevenLabs voice IDs for quick selection
 // Users can also pass a custom voiceId from their own ElevenLabs library
-export const ELEVENLABS_VOICES = {
+const ELEVENLABS_VOICES = {
   'rachel':   '21m00Tcm4TlvDq8ikWAM', // Calm, professional female
   'drew':     '29vD33N1CtxCmqQRPOHJ', // Well-rounded male
   'clyde':    '2EiwWnXFnvU5JabPnv8n', // War veteran male (deep)

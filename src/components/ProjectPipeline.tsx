@@ -6,19 +6,17 @@ import { useAppStore } from '@/store/store';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   generateApi,
-  voicesApi,
   avatarsApi,
-  type ElevenLabsVoice,
   type HeyGenAvatar,
 } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, FileText, Volume2, Video, CheckCircle2,
   Loader2, Sparkles, Play, Pause, RefreshCw, Copy, Check,
-  AlertCircle, ChevronDown, User2, Wand2, Download,
+  AlertCircle, ChevronDown, User2, Download,
   ExternalLink, Clock, HelpCircle, Save
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 // ─── Helpers for prompt parsing ───────────────────────────────────────────────
@@ -41,7 +39,7 @@ function parseProjectPrompt(promptText: string): ParsedPrompt {
         duration: parsed.duration || '',
       };
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
   return {
@@ -179,7 +177,7 @@ export default function ProjectPipeline() {
   const queryClient = useQueryClient();
   const updateProject = useUpdateProject();
 
-  const { data: project, isLoading: isProjectLoading, refetch: refetchProject } = useProject(
+  const { data: project, isLoading: isProjectLoading } = useProject(
     selectedProjectId ?? ''
   );
 

@@ -57,7 +57,7 @@ export default function Navbar() {
     await signOut({ redirect: false });
   };
 
-  const handleMobileNavClick = (id: any) => {
+  const handleMobileNavClick = (id: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline') => {
     setActiveTab(id);
     setIsMobileMenuOpen(false);
   };

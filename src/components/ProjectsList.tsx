@@ -9,20 +9,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  Search, Trash2, CheckCircle2, Video, Loader2,
+  Search, Trash2, Video, Loader2,
   Zap, Sparkles, Copy, Check, MoreHorizontal,
   Image as ImageIcon, FileText, Volume2, Edit3, Plus
 } from 'lucide-react';

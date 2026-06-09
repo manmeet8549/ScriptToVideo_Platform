@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 - Tone/Style: ${parsed.tone || 'Engaging'}
 - Estimated Duration: ${parsed.duration || 'Not specified'}`;
       }
-    } catch (e) {
+    } catch {
       // Fallback to raw prompt
     }
 

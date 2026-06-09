@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Settings as SettingsIcon, Check, Loader2,
+  Settings as SettingsIcon, Loader2,
   Monitor, Sun, Moon, Camera
 } from 'lucide-react';
 import { useUserSettings, useSaveUserSettings } from '@/hooks/useUserSettings';
