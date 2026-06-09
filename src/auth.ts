@@ -10,11 +10,15 @@ import { z } from 'zod';
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  rememberMe: z.string().optional(),
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
-  session: { strategy: 'jwt' },
+  session: { 
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   pages: {
     signIn: '/',  // We use our own auth overlay, not NextAuth's default page
   },

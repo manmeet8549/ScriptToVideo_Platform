@@ -65,6 +65,7 @@ export default function AuthScreen() {
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
+        rememberMe: data.rememberMe ? 'true' : 'false',
         redirect: false,
       });
       if (result?.error) {
