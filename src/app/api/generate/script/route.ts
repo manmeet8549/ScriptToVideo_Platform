@@ -3,6 +3,8 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 
+export const maxDuration = 60; // Allow up to 60 seconds on Vercel (Hobby plan limit)
+
 // System prompt that guides the LLM to produce a structured video script
 const SYSTEM_PROMPT = `You are an expert YouTube video scriptwriter. Given a topic or idea, you produce a polished, engaging video script.
 

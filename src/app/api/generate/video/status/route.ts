@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 import { uploadToR2, generateSignedUrl } from '@/lib/r2';
 
+export const maxDuration = 60; // Allow up to 60 seconds on Vercel (Hobby plan limit)
+
 // GET /api/generate/video/status?projectId=xxx
 // Polls HeyGen for video status and updates the project when complete.
 export async function GET(request: NextRequest) {

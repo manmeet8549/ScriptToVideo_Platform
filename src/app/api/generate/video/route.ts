@@ -3,6 +3,8 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 
+export const maxDuration = 60; // Allow up to 60 seconds on Vercel (Hobby plan limit)
+
 // Map our VideoRatio enum to HeyGen pixel dimensions
 const RATIO_TO_DIMENSIONS: Record<string, { width: number; height: number }> = {
   RATIO_16_9: { width: 1280, height: 720 },

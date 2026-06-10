@@ -3,6 +3,8 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 
+export const maxDuration = 60; // Allow up to 60 seconds on Vercel (Hobby plan limit)
+
 // Well-known ElevenLabs voice IDs for quick selection
 // Users can also pass a custom voiceId from their own ElevenLabs library
 const ELEVENLABS_VOICES = {
