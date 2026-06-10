@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/store';
 import { User, Settings, FileText, Key, LifeBuoy, LogOut, Plus, Menu, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import ThinkNextLogo from '@/components/ThinkNextLogo';
 
 export default function Navbar() {
   const { activeTab, setActiveTab, setIsCreateModalOpen, setAuthView } = useAppStore();
@@ -82,16 +83,9 @@ export default function Navbar() {
           {/* Logo */}
           <button
             onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-2 cursor-pointer shrink-0"
+            className="hover:opacity-85 transition-opacity cursor-pointer shrink-0"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black text-white shadow-md shadow-black/10">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
-            <span className="font-sans text-lg sm:text-xl font-bold tracking-tight text-black hidden sm:inline-block">ScriptForge AI</span>
+            <ThinkNextLogo variant="compact" size="sm" />
           </button>
         </div>
 

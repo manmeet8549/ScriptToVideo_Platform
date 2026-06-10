@@ -13,6 +13,7 @@ import ProjectPipeline from '@/components/ProjectPipeline';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import AuthScreen from '@/components/AuthScreen';
 import VideoLibrary from '@/components/VideoLibrary';
+import ThinkNextLogo from '@/components/ThinkNextLogo';
 
 import { useAppStore } from '@/store/store';
 import { useProjects } from '@/hooks/useProjects';
@@ -192,12 +193,10 @@ export default function Home() {
         <aside className="hidden lg:flex w-64 shrink-0 border-r border-gray-100 bg-white flex-col justify-between h-screen sticky top-0 p-6">
           <div className="space-y-8">
             {/* Logo placeholder */}
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gray-100 animate-pulse" />
-              <div className="space-y-1.5">
-                <div className="h-3.5 w-20 rounded bg-gray-100 animate-pulse" />
-                <div className="h-2.5 w-16 rounded bg-gray-100 animate-pulse" />
-              </div>
+            <div className="flex flex-col gap-2">
+              <div className="h-6 w-32 rounded bg-gray-100 animate-pulse" />
+              <div className="h-3.5 w-28 rounded bg-gray-100 animate-pulse" />
+              <div className="h-3 w-36 rounded bg-gray-100 animate-pulse" />
             </div>
             {/* Nav item placeholders */}
             <div className="space-y-1.5">
@@ -288,19 +287,12 @@ export default function Home() {
         <aside className="hidden lg:flex w-64 shrink-0 border-r border-gray-100 bg-white flex-col justify-between h-screen sticky top-0 p-6">
           <div className="space-y-8">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white shadow-sm shadow-black/10">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-5 w-5">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-              </div>
-              <div>
-                <span className="font-sans text-base font-bold tracking-tight text-black block">Studio AI</span>
-                <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider block">Pro Workspace</span>
-              </div>
-            </div>
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className="hover:opacity-85 transition-opacity text-left cursor-pointer"
+            >
+              <ThinkNextLogo variant="full" size="sm" />
+            </button>
 
             {/* Nav Menu */}
             <nav className="space-y-1.5">
@@ -371,19 +363,15 @@ export default function Home() {
                 <div className="space-y-8">
                   {/* Header & Logo */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black text-white shadow-sm">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4.5 w-4.5">
-                          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                          <path d="M2 17l10 5 10-5" />
-                          <path d="M2 12l10 5 10-5" />
-                        </svg>
-                      </div>
-                      <div>
-                        <span className="font-sans text-sm font-bold tracking-tight text-black block leading-none">Studio AI</span>
-                        <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider block mt-0.5">Workspace</span>
-                      </div>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setActiveTab('dashboard');
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="hover:opacity-85 transition-opacity text-left cursor-pointer"
+                    >
+                      <ThinkNextLogo variant="compact" size="sm" />
+                    </button>
 
                     <button
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -462,16 +450,12 @@ export default function Home() {
                 </svg>
               </button>
               {/* Logo */}
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4.5 w-4.5">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                </div>
-                <span className="font-sans text-sm font-bold tracking-tight text-black">Studio AI</span>
-              </div>
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className="hover:opacity-85 transition-opacity text-left cursor-pointer"
+              >
+                <ThinkNextLogo variant="compact" size="xs" />
+              </button>
             </div>
 
             <div className="flex items-center gap-3">
@@ -831,7 +815,7 @@ export default function Home() {
 
           {/* Inline footer */}
           <footer className="mt-12 pt-6 border-t border-gray-50 text-[10px] text-gray-400 font-sans flex justify-between">
-            <span>© {new Date().getFullYear()} Studio AI. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} ThinkNEXT. All rights reserved.</span>
             <span>Version 1.0.0 (PostgreSQL Build)</span>
           </footer>
         </main>

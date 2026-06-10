@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb, FileText, Volume2, Check, Loader2 } from 'lucide-react';
+import ThinkNextLogo from '@/components/ThinkNextLogo';
 
 // Zod Validation Schemas
 const loginSchema = z.object({
@@ -193,16 +194,9 @@ export default function AuthScreen() {
               {/* Logo Bottom */}
               <button
                 onClick={() => setAuthView(null)}
-                className="mt-16 md:mt-24 flex items-center gap-2 hover:opacity-85 transition-opacity self-start text-left cursor-pointer"
+                className="mt-16 md:mt-24 hover:opacity-85 transition-opacity self-start text-left cursor-pointer"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white shadow-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                </div>
-                <span className="font-bold tracking-tight text-lg text-black">ScriptForge AI</span>
+                <ThinkNextLogo variant="full" size="sm" />
               </button>
             </div>
 
@@ -359,14 +353,7 @@ export default function AuthScreen() {
                   onClick={() => setAuthView(null)}
                   className="flex items-center gap-2 mb-16 hover:opacity-85 transition-opacity self-start text-left cursor-pointer"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                      <path d="M2 17l10 5 10-5" />
-                      <path d="M2 12l10 5 10-5" />
-                    </svg>
-                  </div>
-                  <span className="font-bold tracking-tight text-lg text-black">ScriptForge AI</span>
+                  <ThinkNextLogo variant="full" size="sm" />
                 </button>
 
                 {/* Badge */}

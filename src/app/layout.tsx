@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ScriptForge AI | Turn Ideas Into Videos",
-  description: "Generate scripts, voiceovers, and avatar videos from a single workflow powered by AI. No complex editing required.",
+  title: "ThinkNEXT Studio AI | Turn Ideas Into Videos",
+  description: "Generate scripts, voiceovers, and avatar videos from a single workflow powered by AI — by ThinkNEXT Technologies. No complex editing required.",
 };
 
 export default function RootLayout({
