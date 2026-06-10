@@ -85,7 +85,9 @@ export async function POST(request: NextRequest) {
           errorMessage = body?.detail?.status || `ElevenLabs responded with status ${res.status}`;
         }
       } else if (providerUpper === 'HEYGEN') {
-        const res = await fetch('https://api.heygen.com/v2/avatars', {
+        // Using v3/users/me as a lightweight endpoint to verify API key connection.
+        // v2/avatars can take > 10 seconds due to large payloads.
+        const res = await fetch('https://api.heygen.com/v3/users/me', {
           headers: {
             'X-Api-Key': rawKey,
           },
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
           isValid = true;
         } else {
           const body = await res.json().catch(() => ({}));
-          errorMessage = body?.message || `HeyGen responded with status ${res.status}`;
+          errorMessage = body?.message || body?.error || `HeyGen responded with status ${res.status}`;
         }
       }
     } catch (fetchError) {
