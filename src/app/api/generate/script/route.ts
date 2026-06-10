@@ -6,7 +6,7 @@ import { decrypt } from '@/lib/encryption';
 // System prompt that guides the LLM to produce a structured video script
 const SYSTEM_PROMPT = `You are an expert YouTube video scriptwriter. Given a topic or idea, you produce a polished, engaging video script.
 
-Format the script exactly as follows — no markdown headings, no extra commentary:
+Format the script exactly as follows — no markdown headings, no extra commentary. Keep the structural tags (HOOK:, INTRO:, BODY:, CALL TO ACTION:) exactly in English as shown, but write the script content itself in the requested target language:
 
 HOOK:
 [A compelling opening line or question that grabs attention in the first 5 seconds]
@@ -84,11 +84,30 @@ export async function POST(request: NextRequest) {
     try {
       if (project.prompt.startsWith('{') && project.prompt.endsWith('}')) {
         const parsed = JSON.parse(project.prompt);
+        const language = parsed.language || 'english';
+        
+        let languageInstructions = '';
+        if (language === 'hindi') {
+          languageInstructions = `\n- Language: Hindi (हिंदी). Generate the entire script content in natural, conversational Hindi using standard Hindi vocabulary, Devanagari script (हिंदी), and proper sentence structure.`;
+        } else if (language === 'hinglish') {
+          languageInstructions = `\n- Language: Hinglish (Hindi + English). Generate the script in the way people naturally speak in India, using Hindi as the primary language while incorporating commonly used English words and phrases that are part of everyday conversation.
+Hinglish Requirements:
+1. The script should sound natural and human-like, not like a direct translation.
+2. Use conversational Indian speech patterns.
+3. Write using the Latin/Roman script (transliterated Hindi/Hinglish, e.g., "Dosto, aaj is video me hum baat karenge..."). Do not write in Devanagari characters.
+4. Include commonly used English words that Indians naturally mix into Hindi conversations (e.g., "video", "content", "mobile", "internet", "problem", "idea", "project", "result", "update", etc.).
+5. Avoid excessive or forced English usage.
+6. Maintain proper grammar, flow, and readability.
+7. The generated script should feel like it was written by an experienced Indian content creator, presenter, educator, or storyteller.`;
+        } else {
+          languageInstructions = `\n- Language: English. Generate the entire script content in natural, fluent English.`;
+        }
+
         userPromptContent = `Write a video script based on the following details:
 - Concept/Topic: ${parsed.concept || 'Not specified'}
 - Target Audience: ${parsed.audience || 'General Public'}
 - Tone/Style: ${parsed.tone || 'Engaging'}
-- Estimated Duration: ${parsed.duration || 'Not specified'}`;
+- Estimated Duration: ${parsed.duration || 'Not specified'}${languageInstructions}`;
       }
     } catch {
       // Fallback to raw prompt

@@ -28,6 +28,7 @@ interface ParsedPrompt {
   audience: string;
   tone: string;
   duration: string;
+  language: 'english' | 'hindi' | 'hinglish';
 }
 
 function parseProjectPrompt(promptText: string): ParsedPrompt {
@@ -39,6 +40,7 @@ function parseProjectPrompt(promptText: string): ParsedPrompt {
         audience: parsed.audience || '',
         tone: parsed.tone || '',
         duration: parsed.duration || '',
+        language: parsed.language || 'english',
       };
     }
   } catch {
@@ -49,11 +51,12 @@ function parseProjectPrompt(promptText: string): ParsedPrompt {
     audience: 'Tech Enthusiasts, General Public',
     tone: 'Educational, Optimistic',
     duration: '~3:45 minutes',
+    language: 'english',
   };
 }
 
-function serializeProjectPrompt(concept: string, audience: string, tone: string, duration: string): string {
-  return JSON.stringify({ concept, audience, tone, duration });
+function serializeProjectPrompt(concept: string, audience: string, tone: string, duration: string, language: 'english' | 'hindi' | 'hinglish'): string {
+  return JSON.stringify({ concept, audience, tone, duration, language });
 }
 
 // ─── Voice configurations matching mockup ─────────────────────────────────────
@@ -211,6 +214,7 @@ export default function ProjectPipeline() {
   const [ideaAudience, setIdeaAudience] = useState('');
   const [ideaTone, setIdeaTone] = useState('');
   const [ideaDuration, setIdeaDuration] = useState('');
+  const [ideaLanguage, setIdeaLanguage] = useState<'english' | 'hindi' | 'hinglish'>('english');
 
   // Voice configurations (Step 3)
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(PREMIUM_VOICES[0].id);
@@ -310,6 +314,7 @@ export default function ProjectPipeline() {
     setIdeaAudience((curr) => curr || parsed.audience || 'Tech Enthusiasts, General Public');
     setIdeaTone((curr) => curr || parsed.tone || 'Educational, Optimistic');
     setIdeaDuration((curr) => curr || parsed.duration || '~3:45 minutes');
+    setIdeaLanguage((curr) => curr || parsed.language || 'english');
 
     // Sync values
     if (project.scriptText) {
@@ -413,7 +418,7 @@ export default function ProjectPipeline() {
   const handleSaveIdeaDetails = async () => {
     if (!selectedProjectId) return;
     try {
-      const serialized = serializeProjectPrompt(ideaConcept, ideaAudience, ideaTone, ideaDuration);
+      const serialized = serializeProjectPrompt(ideaConcept, ideaAudience, ideaTone, ideaDuration, ideaLanguage);
       await updateProject.mutateAsync({
         id: selectedProjectId,
         data: {
@@ -433,7 +438,7 @@ export default function ProjectPipeline() {
     setStepErrors((e) => ({ ...e, script: undefined }));
     try {
       // 1. Save input values to database
-      const serialized = serializeProjectPrompt(ideaConcept, ideaAudience, ideaTone, ideaDuration);
+      const serialized = serializeProjectPrompt(ideaConcept, ideaAudience, ideaTone, ideaDuration, ideaLanguage);
       await updateProject.mutateAsync({
         id: selectedProjectId,
         data: { prompt: serialized },
@@ -708,6 +713,35 @@ export default function ProjectPipeline() {
                             className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
                           />
                         </div>
+
+                        {/* Language Style */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-extrabold text-gray-500 uppercase">Language Style</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(['english', 'hindi', 'hinglish'] as const).map((lang) => {
+                              const labels = {
+                                english: 'English',
+                                hindi: 'Hindi (हिंदी)',
+                                hinglish: 'Hinglish'
+                              };
+                              const isSelected = ideaLanguage === lang;
+                              return (
+                                <button
+                                  key={lang}
+                                  type="button"
+                                  onClick={() => setIdeaLanguage(lang)}
+                                  className={`h-11 rounded-xl border text-xs font-bold transition-all ${
+                                    isSelected
+                                      ? 'border-black bg-black text-white shadow-xs'
+                                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                  }`}
+                                >
+                                  {labels[lang]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -752,8 +786,13 @@ export default function ProjectPipeline() {
                 <Card className="rounded-[32px] border border-gray-100 shadow-sm bg-white overflow-hidden p-8 space-y-6">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h2 className="font-extrabold text-xl text-black">Review Script</h2>
-                      <p className="text-xs text-gray-400 mt-1">Read and tweak the generated AI script before voicing.</p>
+                      <h2 className="font-extrabold text-xl text-black font-sans">Review Script</h2>
+                      <p className="text-xs text-gray-400 mt-1 flex flex-wrap items-center gap-2 font-sans">
+                        Read and tweak the generated AI script before voicing.
+                        <span className="inline-flex items-center rounded-full bg-neutral-150/40 px-2 py-0.5 text-[9px] font-extrabold text-neutral-600 border border-neutral-200 capitalize">
+                          {ideaLanguage}
+                        </span>
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1353,6 +1392,12 @@ export default function ProjectPipeline() {
                   {new Date(project.updatedAt).toLocaleDateString(undefined, {
                     month: 'short', day: 'numeric', year: 'numeric'
                   })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Language</span>
+                <span className="font-bold text-black bg-gray-50 border border-gray-100 rounded px-1.5 py-0.5 capitalize">
+                  {ideaLanguage}
                 </span>
               </div>
               <div className="flex justify-between items-center">
