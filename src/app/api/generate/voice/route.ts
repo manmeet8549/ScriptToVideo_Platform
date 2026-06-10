@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { projectId, voiceId } = await request.json();
+    const { projectId, voiceId, speed, pitch, emotion } = await request.json();
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
           audioUrl: audioDataUrl,
           duration,
           projectId,
+          speed: typeof speed === 'number' ? speed : 1.0,
+          pitch: typeof pitch === 'number' ? pitch : 0,
+          emotion: typeof emotion === 'string' ? emotion : 'Professional & Calm',
         },
       }),
       db.project.update({

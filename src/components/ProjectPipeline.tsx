@@ -310,6 +310,9 @@ export default function ProjectPipeline() {
   // UI status helpers
   const [copiedScript, setCopiedScript] = useState(false);
 
+  // Track last synced project ID to prevent resetting local selection state on query invalidations
+  const lastSyncedProjectIdRef = useRef<string | null>(null);
+
   // Sync DB details to frontend state
   useEffect(() => {
     if (!project) return;
@@ -337,6 +340,31 @@ export default function ProjectPipeline() {
     if (project.status === 'GENERATING' || project.videoUrl?.startsWith('heygen:')) {
       setStepStatus((s) => ({ ...s, video: 'loading' }));
       setVideoPollingActive(true);
+    }
+
+    // Restore generated voice settings and file if present on first load
+    const isNewProjectLoad = lastSyncedProjectIdRef.current !== project.id;
+    if (isNewProjectLoad) {
+      lastSyncedProjectIdRef.current = project.id;
+      
+      const latestVoice = project.voices?.[0];
+      if (latestVoice) {
+        setGeneratedAudio(latestVoice.audioUrl || null);
+        if (latestVoice.accent) {
+          setSelectedVoiceId(latestVoice.accent);
+        }
+        if (typeof latestVoice.speed === 'number') {
+          setVoiceSpeed(latestVoice.speed);
+        }
+        if (typeof latestVoice.pitch === 'number') {
+          setVoicePitch(latestVoice.pitch);
+        }
+        if (typeof latestVoice.emotion === 'string') {
+          setVoiceEmotion(latestVoice.emotion);
+        }
+      } else {
+        setGeneratedAudio(null);
+      }
     }
 
     // Set fallback selected avatar if ratio is there
@@ -522,8 +550,13 @@ export default function ProjectPipeline() {
     setStepStatus((s) => ({ ...s, voice: 'loading' }));
     setStepErrors((e) => ({ ...e, voice: undefined }));
     try {
-      // Optionally save speed, pitch, emotion if DB supported (not required, ElevenLabs takes selectedVoiceId)
-      const result = await generateApi.generateVoice(selectedProjectId, selectedVoiceId);
+      const result = await generateApi.generateVoice({
+        projectId: selectedProjectId,
+        voiceId: selectedVoiceId,
+        speed: voiceSpeed,
+        pitch: voicePitch,
+        emotion: voiceEmotion,
+      });
       setGeneratedAudio(result.audioUrl);
       setStepStatus((s) => ({ ...s, voice: 'done' }));
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(selectedProjectId) });
@@ -1223,7 +1256,7 @@ export default function ProjectPipeline() {
                       ) : (
                         <>
                           <Volume2 className="h-4 w-4" />
-                          Generate Voice
+                          {generatedAudio ? 'Regenerate Voice' : 'Generate Voice'}
                         </>
                       )}
                     </Button>

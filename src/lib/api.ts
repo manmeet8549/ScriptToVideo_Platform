@@ -4,6 +4,17 @@ export type ProjectStatus = 'DRAFT' | 'SCRIPTING' | 'VOICING' | 'GENERATING' | '
 export type ProjectStep = 'IDEA' | 'SCRIPT' | 'VOICE' | 'VIDEO';
 export type VideoRatio = 'RATIO_16_9' | 'RATIO_9_16' | 'RATIO_1_1';
 
+export interface ProjectVoice {
+  id: string;
+  accent: string;
+  audioUrl?: string | null;
+  duration?: string | null;
+  speed?: number | null;
+  pitch?: number | null;
+  emotion?: string | null;
+  createdAt: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -18,6 +29,7 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   userId: string;
+  voices?: ProjectVoice[];
 }
 
 export interface GenerationHistoryEntry {
@@ -210,10 +222,10 @@ export const generateApi = {
     }),
 
   /** Step 2: Generate voice audio from project script using ElevenLabs */
-  generateVoice: (projectId: string, voiceId?: string) =>
+  generateVoice: (data: { projectId: string; voiceId?: string; speed?: number; pitch?: number; emotion?: string }) =>
     apiFetch<GenerateVoiceResult>('/api/generate/voice', {
       method: 'POST',
-      body: JSON.stringify({ projectId, voiceId }),
+      body: JSON.stringify(data),
     }),
 
   /** Step 3: Submit HeyGen avatar video job (returns immediately with videoId) */

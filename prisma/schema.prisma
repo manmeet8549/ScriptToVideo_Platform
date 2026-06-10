@@ -118,6 +118,9 @@ model Voice {
   accent   String
   audioUrl String?
   duration String?
+  speed    Float?   @default(1.0)
+  pitch    Int?     @default(0)
+  emotion  String?  @default("Professional & Calm")
 
   createdAt DateTime @default(now())
 
