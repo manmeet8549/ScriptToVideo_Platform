@@ -12,6 +12,7 @@ import SettingsSection from '@/components/SettingsSection';
 import ProjectPipeline from '@/components/ProjectPipeline';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import AuthScreen from '@/components/AuthScreen';
+import VideoLibrary from '@/components/VideoLibrary';
 
 import { useAppStore } from '@/store/store';
 import { useProjects } from '@/hooks/useProjects';
@@ -54,7 +55,7 @@ export default function Home() {
     isUrlUpdatingStateRef.current = true;
 
     // Default or parsed tab
-    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline'] as const;
+    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library'] as const;
     type TabType = typeof validTabs[number];
     if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
       setActiveTab(tabParam as TabType);
@@ -271,6 +272,7 @@ export default function Home() {
       { id: 'templates' as const, label: 'Templates', icon: Copy },
       { id: 'api-keys' as const, label: 'API Keys', icon: KeyRound },
       { id: 'settings' as const, label: 'Settings', icon: Settings },
+      { id: 'video-library' as const, label: 'Video Library', icon: Video },
     ];
 
     const userInitials = user.name
@@ -811,6 +813,18 @@ export default function Home() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 <SettingsSection />
+              </motion.div>
+            )}
+
+            {/* 6. Video Library Tab */}
+            {activeTab === 'video-library' && (
+              <motion.div
+                key="video-library"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <VideoLibrary />
               </motion.div>
             )}
           </AnimatePresence>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { generateSignedUrl } from '@/lib/r2';
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -35,6 +36,25 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
   if (!project) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
+
+  // If the project is completed, check for an R2 video record and generate a fresh signed URL
+  if (project.status === 'COMPLETED') {
+    const video = await db.video.findFirst({
+      where: { projectId: project.id, userId: session.user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (video) {
+      try {
+        const freshSignedUrl = await generateSignedUrl(video.r2Key, 3600);
+        project.videoUrl = freshSignedUrl;
+      } catch (err) {
+        console.error('[PROJECTS_GET] Failed to generate fresh signed URL for video:', err);
+        // Fall back to the url stored in the project/video record
+        project.videoUrl = video.videoUrl;
+      }
+    }
   }
 
   return NextResponse.json({ project });

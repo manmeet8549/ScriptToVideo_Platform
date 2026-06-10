@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, FileText, Volume2, Video, CheckCircle2,
   Loader2, Sparkles, Play, Pause, RefreshCw, Copy, Check,
-  AlertCircle, ChevronDown, User2, Download,
+  Link2, AlertCircle, ChevronDown, User2, Download,
   ExternalLink, Clock, HelpCircle, Save
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -309,6 +309,7 @@ export default function ProjectPipeline() {
 
   // UI status helpers
   const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedVideoLink, setCopiedVideoLink] = useState(false);
 
   // Track last synced project ID to prevent resetting local selection state on query invalidations
   const lastSyncedProjectIdRef = useRef<string | null>(null);
@@ -608,6 +609,13 @@ export default function ProjectPipeline() {
     navigator.clipboard.writeText(generatedScript);
     setCopiedScript(true);
     setTimeout(() => setCopiedScript(false), 2000);
+  };
+
+  const handleCopyVideoLink = () => {
+    if (!generatedVideoUrl) return;
+    navigator.clipboard.writeText(generatedVideoUrl);
+    setCopiedVideoLink(true);
+    setTimeout(() => setCopiedVideoLink(false), 2000);
   };
 
   if (isProjectLoading || !project || activeStepIndex === null) {
@@ -1505,14 +1513,41 @@ export default function ProjectPipeline() {
                           className="w-full h-full object-contain rounded-2xl"
                         />
                       </div>
-                      <div className="flex gap-4">
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <a
                           href={generatedVideoUrl}
-                          download
-                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-black text-white text-xs font-semibold h-11 hover:bg-neutral-800 transition-colors shadow-xs"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const a = document.createElement('a');
+                            a.href = generatedVideoUrl;
+                            const name = project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            a.download = `${name || 'avatar-video'}.mp4`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                          }}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-black text-white text-xs font-semibold h-11 hover:bg-neutral-800 transition-colors shadow-sm"
                         >
                           <Download className="h-4 w-4" /> Download Video
                         </a>
+                        
+                        <button
+                          onClick={handleCopyVideoLink}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl border border-gray-250 text-neutral-600 text-xs font-semibold h-11 hover:bg-gray-50 hover:text-black transition-colors"
+                        >
+                          {copiedVideoLink ? (
+                            <>
+                              <Check className="h-4 w-4 text-emerald-600" />
+                              <span className="text-emerald-600">Link Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Link2 className="h-4 w-4" />
+                              <span>Copy Link</span>
+                            </>
+                          )}
+                        </button>
+
                         <a
                           href={generatedVideoUrl}
                           target="_blank"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
+import { uploadToR2, generateSignedUrl } from '@/lib/r2';
 
 // GET /api/generate/video/status?projectId=xxx
 // Polls HeyGen for video status and updates the project when complete.
@@ -79,31 +80,91 @@ export async function GET(request: NextRequest) {
   const videoUrl: string = statusData?.data?.video_url ?? statusData?.video_url ?? '';
 
   if (heygenStatus === 'completed' && videoUrl) {
-    // 5a. Update project with real video URL and mark as COMPLETED
-    await db.$transaction([
-      db.project.update({
-        where: { id: projectId },
-        data: {
-          videoUrl,
-          step: 'VIDEO',
-          status: 'COMPLETED',
-        },
-      }),
-      // Update the latest VIDEO history entry
-      db.generationHistory.updateMany({
-        where: {
-          projectId,
-          type: 'VIDEO',
-          status: 'IN_PROGRESS',
-        },
-        data: {
-          status: 'COMPLETED',
-          metadata: { heygenVideoId, videoUrl },
-        },
-      }),
-    ]);
+    try {
+      console.log(`[STATUS_POLLER] Video completed on HeyGen. Downloading from URL: ${videoUrl}`);
+      
+      const videoResponse = await fetch(videoUrl);
+      if (!videoResponse.ok) {
+        throw new Error(`Failed to download video from HeyGen: Status ${videoResponse.status}`);
+      }
 
-    return NextResponse.json({ status: 'completed', videoUrl });
+      const arrayBuffer = await videoResponse.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const fileSize = buffer.byteLength;
+
+      // Extract duration from HeyGen response metadata if available
+      let duration: number | null = null;
+      const heygenDuration = statusData?.data?.duration ?? statusData?.duration;
+      if (typeof heygenDuration === 'number') {
+        duration = heygenDuration;
+      } else if (typeof heygenDuration === 'string') {
+        duration = parseFloat(heygenDuration) || null;
+      }
+
+      const r2Key = `videos/${session.user.id}/${projectId}.mp4`;
+      console.log(`[STATUS_POLLER] Uploading video to Cloudflare R2 with key: ${r2Key}`);
+      await uploadToR2(r2Key, buffer, 'video/mp4');
+
+      // Generate a signed URL for immediate use
+      const signedUrl = await generateSignedUrl(r2Key, 3600);
+      const videoTitle = project.name || 'Generated Avatar Video';
+
+      console.log(`[STATUS_POLLER] Registering video in database and updating project state`);
+
+      // 5a. Save Video record, update project, update generation history
+      await db.$transaction([
+        db.video.create({
+          data: {
+            userId: session.user.id,
+            projectId: projectId,
+            title: videoTitle,
+            status: 'COMPLETED',
+            r2Key,
+            videoUrl: signedUrl,
+            fileSize,
+            duration,
+          },
+        }),
+        db.project.update({
+          where: { id: projectId },
+          data: {
+            videoUrl: signedUrl,
+            step: 'VIDEO',
+            status: 'COMPLETED',
+          },
+        }),
+        // Update the latest VIDEO history entry
+        db.generationHistory.updateMany({
+          where: {
+            projectId,
+            type: 'VIDEO',
+            status: 'IN_PROGRESS',
+          },
+          data: {
+            status: 'COMPLETED',
+            metadata: { 
+              heygenVideoId, 
+              heygenVideoUrl: videoUrl,
+              r2Key,
+              fileSize,
+              duration
+            },
+          },
+        }),
+      ]);
+
+      return NextResponse.json({ status: 'completed', videoUrl: signedUrl });
+    } catch (uploadError) {
+      console.error('[STATUS_POLLER] Failed to process/upload completed HeyGen video:', uploadError);
+      
+      // Fallback: If R2 upload fails, log it but don't crash, return the raw HeyGen URL as temporary fallback
+      // so the user can still access it while we log the failure.
+      return NextResponse.json({ 
+        status: 'completed', 
+        videoUrl, 
+        warning: 'R2 storage upload failed. Using provider URL fallback.' 
+      });
+    }
   }
 
   if (heygenStatus === 'failed') {
