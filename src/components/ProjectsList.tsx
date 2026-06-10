@@ -314,22 +314,30 @@ export default function ProjectsList() {
                 }}
                 className="bg-neutral-100 h-44 relative flex items-center justify-center cursor-pointer border-b border-gray-50 overflow-hidden"
               >
-                {project.videos?.[0]?.thumbnailUrl ? (
-                  <div className="relative w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden">
-                    <img 
-                      src={project.videos[0].thumbnailUrl} 
-                      alt="" 
-                      className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
-                    />
-                    <img 
-                      src={project.videos[0].thumbnailUrl} 
-                      alt={project.name} 
-                      className="relative z-10 max-w-full max-h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
-                    />
-                  </div>
-                ) : (
-                  getProjectPreviewIcon(project)
-                )}
+                {(() => {
+                  const video = project.videos?.[0];
+                  if (video?.thumbnailUrl) {
+                    console.log(`[PROJECT_CARD_THUMBNAIL] Project: "${project.name}" (ID: ${project.id}), Video ID: ${video.id}, Thumbnail URL: ${video.thumbnailUrl}`);
+                    return (
+                      <div className="relative w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden">
+                        <img 
+                          src={video.thumbnailUrl} 
+                          alt="" 
+                          className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
+                        />
+                        <img 
+                          src={video.thumbnailUrl} 
+                          alt={project.name} 
+                          className="relative z-10 max-w-full max-h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
+                          onLoad={() => console.log(`[PROJECT_CARD_THUMBNAIL] Thumbnail loaded successfully for Video ID: ${video.id}`)}
+                          onError={() => console.error(`[PROJECT_CARD_THUMBNAIL] Failed to load thumbnail image for Video ID: ${video.id}, URL: ${video.thumbnailUrl}`)}
+                        />
+                      </div>
+                    );
+                  }
+                  console.log(`[PROJECT_CARD_THUMBNAIL] No thumbnail found for project: "${project.name}" (ID: ${project.id}). Rendering placeholder.`);
+                  return getProjectPreviewIcon(project);
+                })()}
                 
                 {/* Status Badge */}
                 <div className="absolute top-4 right-4 z-20">

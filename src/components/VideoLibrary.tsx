@@ -107,27 +107,39 @@ function VideoCard({
 
         {/* Static Thumbnail / Placeholder */}
         {video.thumbnailUrl ? (
-          <div className="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden">
-            <img 
-              src={video.thumbnailUrl} 
-              alt="" 
-              className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
-            />
-            <img 
-              src={video.thumbnailUrl} 
-              alt={video.title} 
-              className="relative z-10 max-w-full max-h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
-            />
-          </div>
-        ) : (
-          <>
-            <div className="absolute inset-0 bg-radial-gradient from-neutral-800 to-neutral-950 opacity-90" />
-            <div className="relative z-10 flex flex-col items-center gap-2.5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-md group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all duration-300">
-                <Play className="h-5 w-5 fill-current ml-0.5" />
+          (() => {
+            console.log(`[VIDEOLIBRARY_CARD_THUMBNAIL] Video: "${video.title}" (ID: ${video.id}), Thumbnail URL: ${video.thumbnailUrl}`);
+            return (
+              <div className="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden">
+                <img 
+                  src={video.thumbnailUrl} 
+                  alt="" 
+                  className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
+                />
+                <img 
+                  src={video.thumbnailUrl} 
+                  alt={video.title} 
+                  className="relative z-10 max-w-full max-h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
+                  onLoad={() => console.log(`[VIDEOLIBRARY_CARD_THUMBNAIL] Thumbnail loaded successfully for Video ID: ${video.id}`)}
+                  onError={() => console.error(`[VIDEOLIBRARY_CARD_THUMBNAIL] Failed to load thumbnail image for Video ID: ${video.id}, URL: ${video.thumbnailUrl}`)}
+                />
               </div>
-            </div>
-          </>
+            );
+          })()
+        ) : (
+          (() => {
+            console.log(`[VIDEOLIBRARY_CARD_THUMBNAIL] No thumbnail found for video: "${video.title}" (ID: ${video.id}). Rendering placeholder.`);
+            return (
+              <>
+                <div className="absolute inset-0 bg-radial-gradient from-neutral-800 to-neutral-950 opacity-90" />
+                <div className="relative z-10 flex flex-col items-center gap-2.5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-md group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all duration-300">
+                    <Play className="h-5 w-5 fill-current ml-0.5" />
+                  </div>
+                </div>
+              </>
+            );
+          })()
         )}
 
         {/* Duration HUD */}
