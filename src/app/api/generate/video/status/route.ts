@@ -104,14 +104,16 @@ export async function GET(request: NextRequest) {
       }
 
       const r2Key = `videos/${session.user.id}/${projectId}.mp4`;
-      console.log(`[STATUS_POLLER] Uploading video to Cloudflare R2 with key: ${r2Key}`);
+      console.log(`[STATUS_POLLER] Video completed on HeyGen. Uploading binary to Cloudflare R2. Key: "${r2Key}", Size: ${fileSize} bytes`);
       await uploadToR2(r2Key, buffer, 'video/mp4');
+      console.log(`[STATUS_POLLER] Cloudflare R2 Upload SUCCESS for key: "${r2Key}"`);
 
       // Generate a signed URL for immediate use
       const signedUrl = await generateSignedUrl(r2Key, 3600);
+      console.log(`[STATUS_POLLER] Generated dynamic R2 signed URL: "${signedUrl}"`);
       const videoTitle = project.name || 'Generated Avatar Video';
 
-      console.log(`[STATUS_POLLER] Registering video in database and updating project state`);
+      console.log(`[STATUS_POLLER] Registering video in database and updating project state. Title: "${videoTitle}"`);
 
       // 5a. Save Video record, update project, update generation history
       await db.$transaction([

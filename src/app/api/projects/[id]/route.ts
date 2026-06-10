@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { generateSignedUrl } from '@/lib/r2';
+import { backfillUserVideos } from '@/lib/backfill';
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -23,6 +24,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL
+    await backfillUserVideos(session.user.id);
+  } catch (err) {
+    console.error('[PROJECT_GET_DETAIL] Failed to backfill videos:', err);
   }
 
   const project = await db.project.findFirst({

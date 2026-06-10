@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { generateSignedUrl } from '@/lib/r2';
+import { backfillUserVideos } from '@/lib/backfill';
 
 interface VideoItem {
   id: string;
@@ -26,6 +27,9 @@ export async function GET() {
   }
 
   try {
+    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL
+    await backfillUserVideos(session.user.id);
+
     // Fetch all completed videos for the user
     const videos = await db.video.findMany({
       where: { userId: session.user.id },

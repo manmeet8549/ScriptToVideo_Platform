@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { backfillUserVideos } from '@/lib/backfill';
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(120),
@@ -14,6 +15,13 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL
+    await backfillUserVideos(session.user.id);
+  } catch (err) {
+    console.error('[PROJECTS_GET] Failed to backfill videos:', err);
   }
 
   const projects = await db.project.findMany({
