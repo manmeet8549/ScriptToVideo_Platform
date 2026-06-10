@@ -1,3 +1,4 @@
+// Database client and encryption utils
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 import { uploadToR2, generateSignedUrl } from '@/lib/r2';
