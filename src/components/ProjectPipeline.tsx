@@ -63,7 +63,7 @@ function serializeProjectPrompt(concept: string, audience: string, tone: string,
 
 const PREMIUM_VOICES = [
   {
-    id: 'pNInz6obpgq5qcGbe82U', // Adam (Default Deep Male)
+    id: 'pNInz6obpgDQGcFmaJgB', // Adam (Default Deep Male)
     name: 'Marcus',
     role: 'Professional Male · Narrator',
     badges: ['DEEP', 'AUTHORITATIVE'],
@@ -77,21 +77,21 @@ const PREMIUM_VOICES = [
     avatarLetter: 'M'
   },
   {
-    id: 'EXAVITQu4vr4xnSDxMaL', // Rachel (Default Warm Female)
+    id: 'EXAVITQu4vr4xnSDxMaL', // Bella (Default Warm Female)
     name: 'Elena',
     role: 'Friendly Female · Conversational',
     badges: ['WARM', 'ENGAGING'],
     avatarLetter: 'E'
   },
   {
-    id: 'AZnzlk1XyvUeBnMexdQD', // Lilli (Clear Female)
+    id: 'AZnzlk1XvdvUeBnXmlld', // Domi (Clear Female)
     name: 'Sofia',
     role: 'Professional Female · News Anchor',
     badges: ['CLEAR', 'FORMAL'],
     avatarLetter: 'S'
   },
   {
-    id: 'VR6AaeYgYWMpfihcE4GC', // Clyde (Energetic Male)
+    id: '2EiwWnXFnvU5JabPnv8n', // Clyde (Energetic Male)
     name: 'Julian',
     role: 'Youthful Male · Energetic',
     badges: ['UPBEAT', 'BRIGHT'],
@@ -232,26 +232,28 @@ export default function ProjectPipeline() {
   const [playingPreviewUrl, setPlayingPreviewUrl] = useState<string | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Fetch ElevenLabs voices (wrapped in useCallback to be call-able on demand)
+  const fetchVoices = useCallback(async () => {
+    setIsElevenVoicesLoading(true);
+    setElevenVoicesError(null);
+    try {
+      const res = await voicesApi.list();
+      setElevenLabsVoices(res.voices || []);
+    } catch (err) {
+      console.error('Failed to load ElevenLabs voices:', err);
+      setElevenVoicesError('ElevenLabs API key not configured or failed to load voices. Please verify your ElevenLabs API Key in Settings.');
+    } finally {
+      setIsElevenVoicesLoading(false);
+    }
+  }, []);
+
   // Fetch ElevenLabs voices if activeStepIndex is 3
   useEffect(() => {
-    if (activeStepIndex !== 3) return;
+    if (activeStepIndex === 3) {
+      fetchVoices();
+    }
+  }, [activeStepIndex, fetchVoices]);
 
-    const fetchVoices = async () => {
-      setIsElevenVoicesLoading(true);
-      setElevenVoicesError(null);
-      try {
-        const res = await voicesApi.list();
-        setElevenLabsVoices(res.voices || []);
-      } catch (err) {
-        console.error('Failed to load ElevenLabs voices:', err);
-        setElevenVoicesError('ElevenLabs API key not configured or failed to load voices. Please verify your ElevenLabs API Key in Settings.');
-      } finally {
-        setIsElevenVoicesLoading(false);
-      }
-    };
-
-    fetchVoices();
-  }, [activeStepIndex]);
 
   const handleTogglePreview = (url: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -566,8 +568,40 @@ export default function ProjectPipeline() {
       const msg = err instanceof Error ? err.message : 'Voice generation failed';
       setStepErrors((e) => ({ ...e, voice: msg }));
       setStepStatus((s) => ({ ...s, voice: 'error' }));
+
+      // Automatic recovery: If the voice ID is invalid or not accessible
+      const isVoiceError = 
+        msg.includes('not found') || 
+        msg.includes('not accessible') || 
+        msg.includes('no longer available') ||
+        msg.includes('voice_id');
+
+      if (isVoiceError) {
+        console.warn(`[VOICE_GEN] Voice ID ${selectedVoiceId} was reported invalid or inaccessible. Initiating automatic recovery.`);
+        
+        // 1. Reset state to first premium preset (Marcus/Adam - which is valid)
+        const fallbackVoiceId = PREMIUM_VOICES[0].id;
+        setSelectedVoiceId(fallbackVoiceId);
+
+        // 2. Refresh the voice list from ElevenLabs in the background to ensure it is fully synchronized
+        fetchVoices().catch((fetchErr) => {
+          console.error('Failed to automatically refresh voices list:', fetchErr);
+        });
+
+        // 3. Clear/sync the invalid voice ID from the project state in the database
+        try {
+          await updateProject.mutateAsync({
+            id: selectedProjectId,
+            data: { voiceAccent: fallbackVoiceId },
+          });
+          queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(selectedProjectId) });
+        } catch (dbErr) {
+          console.error('Failed to sync cleared voiceAccent in DB:', dbErr);
+        }
+      }
     }
   };
+
 
   const handleGenerateVideo = async () => {
     if (!selectedProjectId) return;

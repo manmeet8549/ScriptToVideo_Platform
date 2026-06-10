@@ -82,8 +82,73 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to decrypt ElevenLabs API key' }, { status: 500 });
     }
 
-    // 3. Resolve voice ID — use provided ID, or fallback to Rachel (calm professional)
+    // 3. Resolve voice ID — use provided ID, or fallback to Rachel
     const resolvedVoiceId = voiceId || ELEVENLABS_VOICES['rachel'];
+
+    // Detailed backend logging
+    const keyPrefix = elevenKey ? `${elevenKey.substring(0, 5)}...${elevenKey.substring(elevenKey.length - 4)}` : 'none';
+    console.log(`[GENERATE/VOICE] Verifying voice "${resolvedVoiceId}" for user "${session.user.id}". Key prefix: "${keyPrefix}".`);
+
+    // Verify voice existence/accessibility with ElevenLabs API
+    let voiceExists = false;
+    let checkHttpStatus = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let checkErrorBody: any = null;
+
+    try {
+      const voiceCheckResponse = await fetch(
+        `https://api.elevenlabs.io/v1/voices/${resolvedVoiceId}`,
+        {
+          method: 'GET',
+          headers: {
+            'xi-api-key': elevenKey,
+          },
+        }
+      );
+      
+      checkHttpStatus = voiceCheckResponse.status;
+      if (voiceCheckResponse.ok) {
+        voiceExists = true;
+      } else {
+        checkErrorBody = await voiceCheckResponse.json().catch(() => ({}));
+      }
+    } catch (fetchErr) {
+      console.error(`[GENERATE/VOICE] Network error during voice validation fetch:`, fetchErr);
+      checkErrorBody = { message: fetchErr instanceof Error ? fetchErr.message : String(fetchErr) };
+    }
+
+    if (!voiceExists) {
+      console.error(`[GENERATE/VOICE] Voice validation failed! Voice ID "${resolvedVoiceId}" is not accessible. HTTP Status: ${checkHttpStatus}. Error:`, JSON.stringify(checkErrorBody));
+      
+      let userFriendlyError = 'The selected voice is no longer available or is not accessible with your current ElevenLabs account. Please select another voice or refresh your voice library.';
+      if (checkHttpStatus === 401) {
+        userFriendlyError = 'Your ElevenLabs API key is invalid or unauthorized. Please check your API key in Settings.';
+      }
+      
+      // Log a failed entry in generation history for audit trail
+      await db.generationHistory.create({
+        data: {
+          type: 'VOICE',
+          status: 'FAILED',
+          metadata: { 
+            error: userFriendlyError, 
+            voiceId: resolvedVoiceId, 
+            rawError: checkErrorBody, 
+            httpStatus: checkHttpStatus 
+          },
+          projectId,
+          userId: session.user.id,
+        },
+      });
+
+      return NextResponse.json({ 
+        error: userFriendlyError,
+        errorCode: 'VOICE_NOT_FOUND',
+        invalidVoiceId: resolvedVoiceId
+      }, { status: 400 });
+    }
+
+    console.log(`[GENERATE/VOICE] Voice check passed for voice ID "${resolvedVoiceId}". Proceeding with audio generation.`);
 
     // 4. Mark project as VOICING
     await db.project.update({
@@ -102,6 +167,7 @@ export async function POST(request: NextRequest) {
     });
 
     // 5. Call ElevenLabs TTS
+    console.log(`[GENERATE/VOICE] Requesting audio generation from ElevenLabs. Voice ID: "${resolvedVoiceId}"`);
     const ttsResponse = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}`,
       {
@@ -126,14 +192,20 @@ export async function POST(request: NextRequest) {
 
     if (!ttsResponse.ok) {
       const errorBody = await ttsResponse.json().catch(() => ({}));
-      const errorMsg =
-        errorBody?.detail?.message ||
-        errorBody?.detail?.status ||
-        `ElevenLabs returned ${ttsResponse.status}`;
+      console.error(`[GENERATE/VOICE] ElevenLabs TTS generation failed! HTTP Status: ${ttsResponse.status}. Error body:`, JSON.stringify(errorBody));
+
+      const rawErrorMsg = errorBody?.detail?.message || errorBody?.detail?.status || `ElevenLabs returned HTTP ${ttsResponse.status}`;
+      
+      let errorMsg = `Voice generation failed: ${rawErrorMsg}`;
+      if (ttsResponse.status === 401) {
+        errorMsg = 'Your ElevenLabs API key is invalid or unauthorized. Please check your API key in Settings.';
+      } else if (ttsResponse.status === 404 || rawErrorMsg.toLowerCase().includes('not found') || rawErrorMsg.toLowerCase().includes('voice_id')) {
+        errorMsg = 'The selected voice is no longer available or is not accessible with your current ElevenLabs account. Please select another voice or refresh your voice library.';
+      }
 
       await db.generationHistory.update({
         where: { id: historyEntry.id },
-        data: { status: 'FAILED', metadata: { error: errorMsg, voiceId: resolvedVoiceId } },
+        data: { status: 'FAILED', metadata: { error: errorMsg, rawError: errorBody, voiceId: resolvedVoiceId } },
       });
       await db.project.update({
         where: { id: projectId },
@@ -143,7 +215,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errorMsg }, { status: 502 });
     }
 
-    // 6. Convert audio buffer → base64 data URL
     const audioBuffer = await ttsResponse.arrayBuffer();
     const base64Audio = Buffer.from(audioBuffer).toString('base64');
     const audioDataUrl = `data:audio/mpeg;base64,${base64Audio}`;
