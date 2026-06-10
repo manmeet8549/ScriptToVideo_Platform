@@ -159,8 +159,38 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ status: 'completed', videoUrl: signedUrl });
     } catch (uploadError) {
-      console.error('[STATUS_POLLER] Failed to process/upload completed HeyGen video:', uploadError);
+      console.error('[STATUS_POLLER] Failed to process/upload completed HeyGen video to R2. Attempting database fallback to HeyGen URL...', uploadError);
       
+      try {
+        await db.project.update({
+          where: { id: projectId },
+          data: {
+            videoUrl: videoUrl,
+            step: 'VIDEO',
+            status: 'COMPLETED',
+          },
+        });
+        
+        await db.generationHistory.updateMany({
+          where: {
+            projectId,
+            type: 'VIDEO',
+            status: 'IN_PROGRESS',
+          },
+          data: {
+            status: 'COMPLETED',
+            metadata: { 
+              heygenVideoId, 
+              heygenVideoUrl: videoUrl,
+              error: uploadError instanceof Error ? uploadError.message : String(uploadError),
+              r2UploadFailed: true,
+            },
+          },
+        });
+      } catch (dbError) {
+        console.error('[STATUS_POLLER] Failed to write database fallback:', dbError);
+      }
+
       // Fallback: If R2 upload fails, log it but don't crash, return the raw HeyGen URL as temporary fallback
       // so the user can still access it while we log the failure.
       return NextResponse.json({ 

@@ -706,17 +706,23 @@ export default function ProjectPipeline() {
             {updateProject.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save
           </Button>
-          <Button
-            onClick={() => {
-              if (generatedVideoUrl) {
-                window.open(generatedVideoUrl, '_blank');
-              }
-            }}
-            disabled={!generatedVideoUrl}
-            className="rounded-xl bg-black hover:bg-neutral-800 text-white text-xs font-semibold h-10 px-5"
-          >
-            Export
-          </Button>
+          {generatedVideoUrl ? (
+            <a
+              href={generatedVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl bg-black hover:bg-neutral-800 text-white text-xs font-semibold h-10 px-5 inline-flex items-center justify-center transition-colors shadow-sm"
+            >
+              Export
+            </a>
+          ) : (
+            <Button
+              disabled
+              className="rounded-xl bg-black hover:bg-neutral-800 text-white text-xs font-semibold h-10 px-5"
+            >
+              Export
+            </Button>
+          )}
         </div>
       </div>
 
