@@ -63,19 +63,39 @@ export async function POST(request: NextRequest) {
       RATIO_TO_DIMENSIONS[project.videoRatio ?? 'RATIO_16_9'] ?? RATIO_TO_DIMENSIONS['RATIO_16_9'];
 
     // 4. Build HeyGen payload
-    // If user provided a HeyGen voice ID (from their ElevenLabs linked inside HeyGen), use it.
-    // Otherwise fall back to HeyGen's built-in voice with the project accent.
-    const voicePayload = heygenVoiceId
-      ? {
-          type: 'elevenlabs',
-          elevenlabs_voice_id: heygenVoiceId,
-          input_text: project.scriptText,
-        }
-      : {
+    let voicePayload;
+    if (heygenVoiceId) {
+      // If user explicitly provided a HeyGen voice ID, use it
+      voicePayload = {
+        type: 'text',
+        input_text: project.scriptText,
+        voice_id: heygenVoiceId,
+      };
+    } else {
+      // Look for the latest voice generated for the project in Step 3
+      const latestVoice = await db.voice.findFirst({
+        where: { projectId: project.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (latestVoice && latestVoice.audioUrl) {
+        const host = request.headers.get('host') || 'script-to-video-platform.vercel.app';
+        const proto = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+        const baseUrl = `${proto}://${host}`;
+
+        voicePayload = {
+          type: 'audio',
+          audio_url: `${baseUrl}/api/audio/${latestVoice.id}`,
+        };
+      } else {
+        // Fallback to default HeyGen built-in friendly male voice
+        voicePayload = {
           type: 'text',
           input_text: project.scriptText,
-          voice_id: project.voiceAccent ?? '2d5b0e6cf36f460aa7fc47e3eee4ba54', // HeyGen built-in: friendly male
+          voice_id: '2d5b0e6cf36f460aa7fc47e3eee4ba54',
         };
+      }
+    }
 
     const heygenPayload = {
       video_inputs: [
@@ -126,7 +146,7 @@ export async function POST(request: NextRequest) {
       const errorBody = await heygenResponse.json().catch(() => ({}));
       const errorMsg =
         errorBody?.message ||
-        errorBody?.error ||
+        (typeof errorBody?.error === 'object' && errorBody?.error !== null ? errorBody?.error?.message : errorBody?.error) ||
         `HeyGen returned ${heygenResponse.status}`;
 
       await db.generationHistory.update({
