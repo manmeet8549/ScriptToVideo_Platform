@@ -301,6 +301,12 @@ export default function ProjectPipeline() {
   const [videoPollingActive, setVideoPollingActive] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Custom Avatar ID selection (Alternative method)
+  const [customAvatarId, setCustomAvatarId] = useState<string>('');
+  const [customAvatar, setCustomAvatar] = useState<HeyGenAvatar | null>(null);
+  const [customAvatarError, setCustomAvatarError] = useState<string | null>(null);
+  const [customAvatarLoading, setCustomAvatarLoading] = useState(false);
+
   // UI status helpers
   const [copiedScript, setCopiedScript] = useState(false);
 
@@ -370,6 +376,57 @@ export default function ProjectPipeline() {
       finally { setAvatarsLoading(false); }
     })();
   }, [project]);
+
+  // Validate and fetch custom avatar details
+  useEffect(() => {
+    const trimmedId = customAvatarId.trim();
+    if (!trimmedId) {
+      setCustomAvatar(null);
+      setCustomAvatarError(null);
+      setCustomAvatarLoading(false);
+      return;
+    }
+
+    // Format validation (letters, numbers, hyphens, underscores)
+    const isValidFormat = /^[a-zA-Z0-9_-]+$/.test(trimmedId);
+    if (!isValidFormat) {
+      setCustomAvatar(null);
+      setCustomAvatarError('Invalid ID format. Only letters, numbers, hyphens, and underscores are allowed.');
+      setCustomAvatarLoading(false);
+      return;
+    }
+
+    if (trimmedId.length < 4) {
+      setCustomAvatar(null);
+      setCustomAvatarError('Avatar ID is too short.');
+      setCustomAvatarLoading(false);
+      return;
+    }
+
+    setCustomAvatarError(null);
+    setCustomAvatarLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await avatarsApi.get(trimmedId);
+        if (res.avatar) {
+          setCustomAvatar(res.avatar);
+          setCustomAvatarError(null);
+        } else {
+          setCustomAvatar(null);
+          setCustomAvatarError('Avatar ID not found or invalid.');
+        }
+      } catch (err) {
+        setCustomAvatar(null);
+        const errMsg = err instanceof Error ? err.message : 'Failed to verify Avatar ID.';
+        setCustomAvatarError(errMsg);
+      } finally {
+        setCustomAvatarLoading(false);
+      }
+    }, 600); // 600ms debounce
+
+    return () => clearTimeout(timer);
+  }, [customAvatarId]);
 
   // Max unlocked step logic
   let maxUnlockedStep = 1;
@@ -495,9 +552,13 @@ export default function ProjectPipeline() {
         data: { videoRatio: dbRatioMap[videoRatio] }
       });
 
+      const avatarToUse = (customAvatarId.trim() && customAvatar)
+        ? customAvatar.avatar_id
+        : selectedAvatarId;
+
       await generateApi.generateVideo({
         projectId: selectedProjectId,
-        avatarId: selectedAvatarId || undefined,
+        avatarId: avatarToUse || undefined,
       });
 
       setVideoPollingActive(true);
@@ -1221,9 +1282,82 @@ export default function ProjectPipeline() {
                     </div>
                   ) : (
                     <div className="space-y-5">
+                      {/* Avatar ID (Optional) Input Field */}
+                      <div className="space-y-1.5 pb-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider">
+                            Avatar ID (Optional)
+                          </label>
+                          {customAvatarLoading && (
+                            <span className="flex items-center gap-1 text-[10px] text-gray-400 font-medium">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Verifying...
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Enter HeyGen Avatar ID"
+                          value={customAvatarId}
+                          onChange={(e) => setCustomAvatarId(e.target.value)}
+                          className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
+                        />
+                        <p className="text-[10px] text-gray-400 leading-normal">
+                          Have a custom HeyGen avatar? Enter its Avatar ID here. Leave blank to select an avatar from the gallery below.
+                        </p>
+
+                        {/* Display Custom Avatar Preview or Error */}
+                        {customAvatarId.trim() !== '' && (
+                          <div className="mt-2.5">
+                            {customAvatarError ? (
+                              <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 p-2.5 text-[11px] text-red-700 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                <span>{customAvatarError}</span>
+                              </div>
+                            ) : customAvatar ? (
+                              <div className="flex items-center gap-3 rounded-2xl border-2 border-black bg-neutral-50 p-2.5 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="relative h-12 w-12 rounded-xl overflow-hidden border border-gray-150 shrink-0 bg-white">
+                                  {customAvatar.preview_image_url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={customAvatar.preview_image_url}
+                                      alt={customAvatar.avatar_name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                      <User2 className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-extrabold text-black truncate">
+                                    {customAvatar.avatar_name}
+                                  </p>
+                                  <p className="text-[9px] text-neutral-500 uppercase font-extrabold tracking-wider">
+                                    Active Custom Avatar
+                                  </p>
+                                </div>
+                                <div className="flex items-center justify-center h-6 w-6 rounded-full bg-black shrink-0">
+                                  <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Avatar Selection list */}
-                      <div className="space-y-2.5">
-                        <label className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider">Choose Avatar</label>
+                      <div className="space-y-2.5 border-t border-gray-100 pt-4">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider">
+                            Choose Avatar
+                          </label>
+                          {customAvatarId.trim() && customAvatar && (
+                            <span className="text-[9px] bg-neutral-100 text-neutral-500 font-bold px-2 py-0.5 rounded-full animate-in fade-in duration-250">
+                              Dimmed because Custom ID is active
+                            </span>
+                          )}
+                        </div>
                         
                         {avatarsLoading ? (
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-4 gap-2 sm:gap-3">
@@ -1232,16 +1366,19 @@ export default function ProjectPipeline() {
                         ) : avatars.length > 0 ? (
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-4 gap-2 sm:gap-3 max-h-48 overflow-y-auto pr-1">
                             {avatars.map((a) => {
-                              const isSelected = selectedAvatarId === a.avatar_id;
+                              const isSelected = !customAvatarId.trim() && selectedAvatarId === a.avatar_id;
                               return (
                                 <button
                                   key={a.avatar_id}
-                                  onClick={() => setSelectedAvatarId(a.avatar_id)}
+                                  onClick={() => {
+                                    setSelectedAvatarId(a.avatar_id);
+                                    setCustomAvatarId('');
+                                  }}
                                   className={`relative rounded-2xl overflow-hidden border-2 transition-all aspect-square shrink-0 ${
                                     isSelected
-                                      ? 'border-black ring-1 ring-black'
+                                      ? 'border-black ring-1 ring-black shadow-xs'
                                       : 'border-gray-100 hover:border-gray-300'
-                                  }`}
+                                  } ${customAvatarId.trim() && customAvatar ? 'opacity-40 hover:opacity-75' : ''}`}
                                 >
                                   {a.preview_image_url ? (
                                     // eslint-disable-next-line @next/next/no-img-element
@@ -1289,7 +1426,7 @@ export default function ProjectPipeline() {
                       </div>
 
                       {stepErrors.video && (
-                        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
+                        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700 animate-in fade-in duration-200">
                           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                           <span>{stepErrors.video}</span>
                         </div>
@@ -1297,7 +1434,10 @@ export default function ProjectPipeline() {
 
                       <button
                         onClick={handleGenerateVideo}
-                        className="w-full flex items-center justify-center gap-2 rounded-2xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm h-12 transition-all"
+                        disabled={
+                          customAvatarId.trim() !== '' && (customAvatarLoading || !customAvatar)
+                        }
+                        className="w-full flex items-center justify-center gap-2 rounded-2xl bg-black text-white hover:bg-neutral-800 disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed font-semibold text-sm h-12 transition-all shadow-xs"
                       >
                         <Video className="h-4 w-4" />
                         Generate Avatar Video with HeyGen

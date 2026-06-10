@@ -256,4 +256,6 @@ export interface HeyGenAvatar {
 export const avatarsApi = {
   /** List all available HeyGen avatars for the authenticated user's API key */
   list: () => apiFetch<{ avatars: HeyGenAvatar[] }>('/api/avatars'),
+  /** Fetch details/verify a specific HeyGen avatar ID */
+  get: (id: string) => apiFetch<{ avatar: HeyGenAvatar }>(`/api/avatars?id=${encodeURIComponent(id)}`),
 };
