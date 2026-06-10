@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -17,6 +17,8 @@ interface VideoItem {
   videoUrl: string;
   fileSize: number | null;
   duration: number | null;
+  thumbnailUrl?: string | null;
+  thumbnailKey?: string | null;
   createdAt: string;
   project: {
     name: string;
@@ -37,6 +39,170 @@ function formatDuration(seconds: number | null): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function VideoCard({
+  video,
+  setActiveWatchVideo,
+  handleCopyLink,
+  handleDownload,
+  handleDelete,
+  copiedId,
+  isDeletePending,
+}: {
+  video: VideoItem;
+  setActiveWatchVideo: (video: VideoItem) => void;
+  handleCopyLink: (video: VideoItem) => void;
+  handleDownload: (video: VideoItem) => void;
+  handleDelete: (id: string) => void;
+  copiedId: string | null;
+  isDeletePending: boolean;
+}) {
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    // Debounce hover play by 300ms
+    timeoutRef.current = setTimeout(() => {
+      setIsPlayingPreview(true);
+    }, 300);
+  };
+
+  const handleMouseLeave = () => {
+    setIsPlayingPreview(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <Card className="group rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col h-full">
+      {/* Media Card Preview Header */}
+      <div 
+        className="relative aspect-video bg-neutral-950 flex items-center justify-center border-b border-gray-100 cursor-pointer overflow-hidden"
+        onClick={() => setActiveWatchVideo(video)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {/* Hover muted video preview */}
+        {isPlayingPreview && video.videoUrl ? (
+          <video
+            src={video.videoUrl}
+            muted
+            playsInline
+            autoPlay
+            loop
+            className="absolute inset-0 w-full h-full object-cover z-10"
+          />
+        ) : null}
+
+        {/* Static Thumbnail / Placeholder */}
+        {video.thumbnailUrl ? (
+          <div className="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden">
+            <img 
+              src={video.thumbnailUrl} 
+              alt="" 
+              className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
+            />
+            <img 
+              src={video.thumbnailUrl} 
+              alt={video.title} 
+              className="relative z-10 max-w-full max-h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
+            />
+          </div>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-radial-gradient from-neutral-800 to-neutral-950 opacity-90" />
+            <div className="relative z-10 flex flex-col items-center gap-2.5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-md group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all duration-300">
+                <Play className="h-5 w-5 fill-current ml-0.5" />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Duration HUD */}
+        <div className="absolute bottom-3 right-3 z-20 pointer-events-none">
+          <span className="text-[10px] tracking-wider uppercase font-extrabold text-white bg-black/60 border border-white/10 px-2 py-0.5 rounded-full backdrop-blur-xs">
+            {formatDuration(video.duration)}
+          </span>
+        </div>
+      </div>
+
+      {/* Video metadata body */}
+      <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-4">
+        <div className="space-y-1">
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+            {video.project?.name || 'Project'}
+          </span>
+          <h4 className="font-bold text-sm text-black truncate group-hover:text-neutral-900 transition-colors"
+              title={video.title}>
+            {video.title}
+          </h4>
+        </div>
+
+        <div className="space-y-2 pt-2 border-t border-gray-50 text-[11px] text-gray-500 font-semibold font-sans">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5 text-gray-400" />
+            <span>{new Date(video.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <HardDrive className="h-3.5 w-3.5 text-gray-400" />
+            <span>{formatBytes(video.fileSize)}</span>
+          </div>
+        </div>
+
+        {/* Card Actions bar */}
+        <div className="grid grid-cols-3 gap-2 pt-3">
+          <button
+            onClick={() => handleCopyLink(video)}
+            className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-gray-150 text-gray-600 hover:text-black hover:bg-neutral-50 active:bg-neutral-100 transition-all"
+            title="Copy Video Link"
+          >
+            {copiedId === video.id ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-600">Copied</span>
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3.5 w-3.5" />
+                <span>Link</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={() => handleDownload(video)}
+            className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-gray-150 text-gray-600 hover:text-black hover:bg-neutral-50 active:bg-neutral-100 transition-all"
+            title="Download Video"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Get</span>
+          </button>
+
+          <button
+            onClick={() => handleDelete(video.id)}
+            disabled={isDeletePending}
+            className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-red-100 text-red-500 hover:text-red-700 hover:bg-red-50/50 active:bg-red-50 transition-all disabled:opacity-50"
+            title="Delete Video"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Delete</span>
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function VideoLibrary() {
@@ -187,86 +353,15 @@ export default function VideoLibrary() {
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
           >
-            <Card className="group rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col h-full">
-              {/* Media Card Placeholder Header */}
-              <div className="relative aspect-video bg-neutral-900 flex items-center justify-center border-b border-gray-100 cursor-pointer overflow-hidden"
-                   onClick={() => setActiveWatchVideo(video)}>
-                {/* Flat custom design thumbnail */}
-                <div className="absolute inset-0 bg-radial-gradient from-neutral-800 to-neutral-950 opacity-90" />
-                <div className="relative z-10 flex flex-col items-center gap-2.5">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-md group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all duration-300">
-                    <Play className="h-5 w-5 fill-current ml-0.5" />
-                  </div>
-                  <span className="text-[10px] tracking-wider uppercase font-extrabold text-white/50 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
-                    {formatDuration(video.duration)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Video metadata body */}
-              <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                <div className="space-y-1">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
-                    {video.project?.name || 'Project'}
-                  </span>
-                  <h4 className="font-bold text-sm text-black truncate group-hover:text-neutral-900 transition-colors"
-                      title={video.title}>
-                    {video.title}
-                  </h4>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-gray-50 text-[11px] text-gray-500 font-semibold font-sans">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                    <span>{new Date(video.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <HardDrive className="h-3.5 w-3.5 text-gray-400" />
-                    <span>{formatBytes(video.fileSize)}</span>
-                  </div>
-                </div>
-
-                {/* Card Actions bar */}
-                <div className="grid grid-cols-3 gap-2 pt-3">
-                  <button
-                    onClick={() => handleCopyLink(video)}
-                    className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-gray-150 text-gray-600 hover:text-black hover:bg-neutral-50 active:bg-neutral-100 transition-all"
-                    title="Copy Video Link"
-                  >
-                    {copiedId === video.id ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
-                        <span className="text-emerald-600">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Link2 className="h-3.5 w-3.5" />
-                        <span>Link</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => handleDownload(video)}
-                    className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-gray-150 text-gray-600 hover:text-black hover:bg-neutral-50 active:bg-neutral-100 transition-all"
-                    title="Download Video"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Get</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(video.id)}
-                    disabled={deleteMutation.isPending}
-                    className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-red-100 text-red-500 hover:text-red-700 hover:bg-red-50/50 active:bg-red-50 transition-all disabled:opacity-50"
-                    title="Delete Video"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+            <VideoCard
+              video={video}
+              setActiveWatchVideo={setActiveWatchVideo}
+              handleCopyLink={handleCopyLink}
+              handleDownload={handleDownload}
+              handleDelete={handleDelete}
+              copiedId={copiedId}
+              isDeletePending={deleteMutation.isPending}
+            />
           </motion.div>
         ))}
       </div>

@@ -15,6 +15,26 @@ export interface ProjectVoice {
   createdAt: string;
 }
 
+export interface Video {
+  id: string;
+  userId: string;
+  projectId: string;
+  title: string;
+  status: string;
+  r2Key: string;
+  videoUrl: string;
+  fileSize?: number | null;
+  duration?: number | null;
+  thumbnailUrl?: string | null;
+  thumbnailKey?: string | null;
+  thumbnailGeneratedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  project?: {
+    name: string;
+  };
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -30,6 +50,7 @@ export interface Project {
   updatedAt: string;
   userId: string;
   voices?: ProjectVoice[];
+  videos?: Video[];
 }
 
 export interface GenerationHistoryEntry {

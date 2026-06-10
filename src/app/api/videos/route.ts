@@ -14,6 +14,8 @@ interface VideoItem {
   videoUrl: string;
   fileSize: number | null;
   duration: number | null;
+  thumbnailUrl?: string | null;
+  thumbnailKey?: string | null;
   createdAt: Date;
   project: {
     name: string;
@@ -43,14 +45,23 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Generate fresh signed R2 URLs for each video
+    // Generate fresh signed R2 URLs for each video and its thumbnail
     const videosWithUrls = await Promise.all(
       (videos as unknown as VideoItem[]).map(async (v: VideoItem) => {
         try {
           const signedUrl = await generateSignedUrl(v.r2Key, 3600);
+          let thumbnailUrl = v.thumbnailUrl;
+          if (v.thumbnailKey) {
+            try {
+              thumbnailUrl = await generateSignedUrl(v.thumbnailKey, 3600);
+            } catch (thumbErr) {
+              console.error(`[VIDEOS_API] Failed to sign thumbnail URL for key ${v.thumbnailKey}:`, thumbErr);
+            }
+          }
           return {
             ...v,
             videoUrl: signedUrl,
+            thumbnailUrl,
           };
         } catch (err) {
           console.error(`[VIDEOS_API] Failed to sign URL for key ${v.r2Key}:`, err);

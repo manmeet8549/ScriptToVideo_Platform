@@ -131,8 +131,35 @@ export async function backfillUserVideos(userId: string): Promise<void> {
           console.log(`[BACKFILL][${timestamp}] Uploading to Cloudflare R2 with key: ${r2Key} (${fileSize} bytes)`);
           await uploadToR2(r2Key, buffer, 'video/mp4');
 
+          // Download and Upload Thumbnail to R2
+          const heygenThumbnailUrl = hgData?.data?.thumbnail_url ?? hgData?.thumbnail_url ?? '';
+          let thumbnailUrl: string | null = heygenThumbnailUrl || null;
+          let thumbnailKey: string | null = null;
+
+          if (heygenThumbnailUrl) {
+            try {
+              console.log(`[BACKFILL][${timestamp}] Downloading thumbnail from HeyGen: ${heygenThumbnailUrl}`);
+              const thumbResponse = await fetch(heygenThumbnailUrl);
+              if (thumbResponse.ok) {
+                const thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
+                thumbnailKey = `videos/${userId}/${project.id}-thumbnail.jpg`;
+                console.log(`[BACKFILL][${timestamp}] Uploading thumbnail to R2 with key: ${thumbnailKey}`);
+                await uploadToR2(thumbnailKey, thumbBuffer, 'image/jpeg');
+              }
+            } catch (thumbError) {
+              console.error(`[BACKFILL][${timestamp}] Failed to upload thumbnail to R2:`, thumbError);
+            }
+          }
+
           // Generate a signed URL for immediate use
           const signedUrl = await generateSignedUrl(r2Key, 3600);
+          if (thumbnailKey) {
+            try {
+              thumbnailUrl = await generateSignedUrl(thumbnailKey, 3600);
+            } catch (thumbSignErr) {
+              console.error(`[BACKFILL][${timestamp}] Failed to sign thumbnail URL:`, thumbSignErr);
+            }
+          }
           const videoTitle = project.name || 'Generated Avatar Video';
 
           // Insert into database and update project record in a transaction
@@ -148,6 +175,9 @@ export async function backfillUserVideos(userId: string): Promise<void> {
                 videoUrl: signedUrl,
                 fileSize,
                 duration,
+                thumbnailUrl,
+                thumbnailKey,
+                thumbnailGeneratedAt: new Date(),
               },
             }),
             db.project.update({
@@ -172,6 +202,8 @@ export async function backfillUserVideos(userId: string): Promise<void> {
                   heygenVideoId: videoId,
                   duration,
                   r2Key,
+                  thumbnailUrl,
+                  thumbnailKey,
                 },
               },
             }),

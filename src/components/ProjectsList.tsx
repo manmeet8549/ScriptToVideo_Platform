@@ -304,7 +304,6 @@ export default function ProjectsList() {
               key={project.id}
               className="rounded-[32px] border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
             >
-              {/* Top half preview */}
               <div 
                 onClick={() => {
                   if (!user) {
@@ -315,10 +314,25 @@ export default function ProjectsList() {
                 }}
                 className="bg-neutral-100 h-44 relative flex items-center justify-center cursor-pointer border-b border-gray-50 overflow-hidden"
               >
-                {getProjectPreviewIcon(project)}
+                {project.videos?.[0]?.thumbnailUrl ? (
+                  <div className="relative w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={project.videos[0].thumbnailUrl} 
+                      alt="" 
+                      className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
+                    />
+                    <img 
+                      src={project.videos[0].thumbnailUrl} 
+                      alt={project.name} 
+                      className="relative z-10 max-w-full max-h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
+                    />
+                  </div>
+                ) : (
+                  getProjectPreviewIcon(project)
+                )}
                 
                 {/* Status Badge */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-20">
                   {getStatusBadge(project)}
                 </div>
               </div>

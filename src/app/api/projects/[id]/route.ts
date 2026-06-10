@@ -39,6 +39,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       scripts: { orderBy: { createdAt: 'desc' } },
       voices: { orderBy: { createdAt: 'desc' } },
       generationHistory: { orderBy: { createdAt: 'desc' }, take: 10 },
+      videos: { orderBy: { createdAt: 'desc' } },
     },
   });
 
@@ -48,19 +49,26 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
   // If the project is completed, check for an R2 video record and generate a fresh signed URL
   if (project.status === 'COMPLETED') {
-    const video = await db.video.findFirst({
-      where: { projectId: project.id, userId: session.user.id },
-      orderBy: { createdAt: 'desc' },
-    });
+    const video = project.videos?.[0];
 
     if (video) {
       try {
         const freshSignedUrl = await generateSignedUrl(video.r2Key, 3600);
         project.videoUrl = freshSignedUrl;
+        video.videoUrl = freshSignedUrl;
       } catch (err) {
         console.error('[PROJECTS_GET] Failed to generate fresh signed URL for video:', err);
         // Fall back to the url stored in the project/video record
         project.videoUrl = video.videoUrl;
+      }
+
+      if (video.thumbnailKey) {
+        try {
+          const freshThumbnailUrl = await generateSignedUrl(video.thumbnailKey, 3600);
+          video.thumbnailUrl = freshThumbnailUrl;
+        } catch (err) {
+          console.error('[PROJECTS_GET] Failed to generate fresh signed URL for thumbnail:', err);
+        }
       }
     }
   }

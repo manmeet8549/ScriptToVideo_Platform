@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { backfillUserVideos } from '@/lib/backfill';
+import { generateSignedUrl } from '@/lib/r2';
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(120),
@@ -31,8 +32,34 @@ export async function GET() {
       _count: {
         select: { scripts: true, voices: true },
       },
+      videos: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
     },
   });
+
+  // Dynamically generate signed URLs for video and thumbnail
+  for (const project of projects) {
+    const latestVideo = project.videos?.[0];
+    if (latestVideo) {
+      try {
+        const signedVideo = await generateSignedUrl(latestVideo.r2Key, 3600);
+        project.videoUrl = signedVideo;
+        latestVideo.videoUrl = signedVideo;
+      } catch (err) {
+        console.error('[PROJECTS_GET_LIST] Failed to sign video URL:', err);
+      }
+      if (latestVideo.thumbnailKey) {
+        try {
+          const signedThumbnail = await generateSignedUrl(latestVideo.thumbnailKey, 3600);
+          latestVideo.thumbnailUrl = signedThumbnail;
+        } catch (err) {
+          console.error('[PROJECTS_GET_LIST] Failed to sign thumbnail URL:', err);
+        }
+      }
+    }
+  }
 
   return NextResponse.json({ projects });
 }

@@ -82,6 +82,10 @@ export async function GET(request: NextRequest) {
   const videoUrl: string = statusData?.data?.video_url ?? statusData?.video_url ?? '';
 
   if (heygenStatus === 'completed' && videoUrl) {
+    const heygenThumbnailUrl = statusData?.data?.thumbnail_url ?? statusData?.thumbnail_url ?? '';
+    let thumbnailUrl: string | null = heygenThumbnailUrl || null;
+    let thumbnailKey: string | null = null;
+
     try {
       console.log(`[STATUS_POLLER] Video completed on HeyGen. Downloading from URL: ${videoUrl}`);
       
@@ -108,9 +112,36 @@ export async function GET(request: NextRequest) {
       await uploadToR2(r2Key, buffer, 'video/mp4');
       console.log(`[STATUS_POLLER] Cloudflare R2 Upload SUCCESS for key: "${r2Key}"`);
 
-      // Generate a signed URL for immediate use
+      // Download and Upload Thumbnail to R2
+      if (heygenThumbnailUrl) {
+        try {
+          console.log(`[STATUS_POLLER] Downloading thumbnail from HeyGen: ${heygenThumbnailUrl}`);
+          const thumbResponse = await fetch(heygenThumbnailUrl);
+          if (thumbResponse.ok) {
+            const thumbBuffer = Buffer.from(await thumbResponse.arrayBuffer());
+            thumbnailKey = `videos/${session.user.id}/${projectId}-thumbnail.jpg`;
+            console.log(`[STATUS_POLLER] Uploading thumbnail to R2 with key: ${thumbnailKey}`);
+            await uploadToR2(thumbnailKey, thumbBuffer, 'image/jpeg');
+            console.log(`[STATUS_POLLER] Cloudflare R2 Thumbnail Upload SUCCESS for key: "${thumbnailKey}"`);
+          } else {
+            console.warn(`[STATUS_POLLER] HeyGen thumbnail fetch failed: ${thumbResponse.status}.`);
+          }
+        } catch (thumbError) {
+          console.error('[STATUS_POLLER] Failed to upload thumbnail to R2:', thumbError);
+        }
+      }
+
+      // Generate signed URLs for immediate use
       const signedUrl = await generateSignedUrl(r2Key, 3600);
-      console.log(`[STATUS_POLLER] Generated dynamic R2 signed URL: "${signedUrl}"`);
+      if (thumbnailKey) {
+        try {
+          thumbnailUrl = await generateSignedUrl(thumbnailKey, 3600);
+        } catch (thumbSignErr) {
+          console.error('[STATUS_POLLER] Failed to sign thumbnail URL:', thumbSignErr);
+        }
+      }
+
+      console.log(`[STATUS_POLLER] Generated dynamic R2 signed URL: "${signedUrl}", thumbnail: "${thumbnailUrl}"`);
       const videoTitle = project.name || 'Generated Avatar Video';
 
       console.log(`[STATUS_POLLER] Registering video in database and updating project state. Title: "${videoTitle}"`);
@@ -127,6 +158,9 @@ export async function GET(request: NextRequest) {
             videoUrl: signedUrl,
             fileSize,
             duration,
+            thumbnailUrl,
+            thumbnailKey,
+            thumbnailGeneratedAt: new Date(),
           },
         }),
         db.project.update({
@@ -151,13 +185,15 @@ export async function GET(request: NextRequest) {
               heygenVideoUrl: videoUrl,
               r2Key,
               fileSize,
-              duration
+              duration,
+              thumbnailUrl,
+              thumbnailKey,
             },
           },
         }),
       ]);
 
-      return NextResponse.json({ status: 'completed', videoUrl: signedUrl });
+      return NextResponse.json({ status: 'completed', videoUrl: signedUrl, thumbnailUrl });
     } catch (uploadError) {
       console.error('[STATUS_POLLER] Failed to process/upload completed HeyGen video to R2. Attempting database fallback to HeyGen URL...', uploadError);
       
@@ -182,6 +218,7 @@ export async function GET(request: NextRequest) {
             metadata: { 
               heygenVideoId, 
               heygenVideoUrl: videoUrl,
+              heygenThumbnailUrl,
               error: uploadError instanceof Error ? uploadError.message : String(uploadError),
               r2UploadFailed: true,
             },
@@ -196,6 +233,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ 
         status: 'completed', 
         videoUrl, 
+        thumbnailUrl: heygenThumbnailUrl || null,
         warning: 'R2 storage upload failed. Using provider URL fallback.' 
       });
     }
