@@ -22,6 +22,7 @@ interface VideoItem {
   createdAt: string;
   project: {
     name: string;
+    videoRatio?: 'RATIO_16_9' | 'RATIO_9_16' | 'RATIO_1_1' | null;
   };
 }
 
@@ -95,14 +96,23 @@ function VideoCard({
       >
         {/* Hover muted video preview */}
         {isPlayingPreview && video.videoUrl ? (
-          <video
-            src={video.videoUrl}
-            muted
-            playsInline
-            autoPlay
-            loop
-            className="absolute inset-0 w-full h-full object-cover z-10"
-          />
+          <div className="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden z-10">
+            {video.thumbnailUrl ? (
+              <img 
+                src={video.thumbnailUrl} 
+                alt="" 
+                className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
+              />
+            ) : null}
+            <video
+              src={video.videoUrl}
+              muted
+              playsInline
+              autoPlay
+              loop
+              className="relative z-10 max-w-full max-h-full object-contain"
+            />
+          </div>
         ) : null}
 
         {/* Static Thumbnail / Placeholder */}
@@ -392,37 +402,63 @@ export default function VideoLibrary() {
             />
 
             {/* Modal Box */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="relative w-full max-w-4xl bg-black rounded-3xl shadow-2xl overflow-hidden border border-neutral-800 z-50 flex flex-col"
-            >
-              {/* Header Bar */}
-              <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between px-6 z-10">
-                <span className="text-sm font-bold text-white font-sans drop-shadow-md truncate max-w-xl">
-                  {activeWatchVideo.title}
-                </span>
-                <button
-                  onClick={() => setActiveWatchVideo(null)}
-                  className="h-8 w-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-all duration-200"
-                  aria-label="Close video player"
+            {(() => {
+              const projectRatio = activeWatchVideo.project?.videoRatio;
+              const ratio = projectRatio === 'RATIO_9_16' ? '9:16' : projectRatio === 'RATIO_1_1' ? '1:1' : '16:9';
+              
+              return (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                  className={`relative bg-black rounded-3xl shadow-2xl overflow-hidden border border-neutral-800 z-50 flex flex-col transition-all duration-300 mx-auto ${
+                    ratio === '9:16'
+                      ? 'w-full max-w-sm md:max-w-[380px]'
+                      : ratio === '1:1'
+                        ? 'w-full max-w-xl'
+                        : 'w-full max-w-4xl'
+                  }`}
                 >
-                  <X className="h-4.5 w-4.5" />
-                </button>
-              </div>
+                  {/* Header Bar */}
+                  <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between px-6 z-10">
+                    <span className="text-sm font-bold text-white font-sans drop-shadow-md truncate max-w-[80%]">
+                      {activeWatchVideo.title}
+                    </span>
+                    <button
+                      onClick={() => setActiveWatchVideo(null)}
+                      className="h-8 w-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-all duration-200"
+                      aria-label="Close video player"
+                    >
+                      <X className="h-4.5 w-4.5" />
+                    </button>
+                  </div>
 
-              {/* Video Player */}
-              <div className="relative w-full aspect-video bg-neutral-950 flex items-center justify-center">
-                <video
-                  src={activeWatchVideo.videoUrl}
-                  controls
-                  autoPlay
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </motion.div>
+                  {/* Video Player */}
+                  <div className={`relative w-full bg-neutral-950 flex items-center justify-center overflow-hidden ${
+                    ratio === '9:16'
+                      ? 'aspect-[9/16] max-h-[75vh]'
+                      : ratio === '1:1'
+                        ? 'aspect-square max-h-[75vh]'
+                        : 'aspect-video'
+                  }`}>
+                    {activeWatchVideo.thumbnailUrl ? (
+                      <img 
+                        src={activeWatchVideo.thumbnailUrl} 
+                        alt="" 
+                        className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
+                      />
+                    ) : null}
+                    <video
+                      src={activeWatchVideo.videoUrl}
+                      controls
+                      autoPlay
+                      className="relative z-10 w-full h-full object-contain"
+                    />
+                  </div>
+                </motion.div>
+              );
+            })()}
           </div>
         )}
       </AnimatePresence>

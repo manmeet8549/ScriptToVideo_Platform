@@ -19,6 +19,7 @@ interface VideoItem {
   createdAt: Date;
   project: {
     name: string;
+    videoRatio: 'RATIO_16_9' | 'RATIO_9_16' | 'RATIO_1_1' | null;
   };
 }
 
@@ -39,6 +40,7 @@ export async function GET() {
         project: {
           select: {
             name: true,
+            videoRatio: true,
           },
         },
       },

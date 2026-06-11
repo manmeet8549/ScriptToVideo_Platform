@@ -1546,7 +1546,13 @@ export default function ProjectPipeline() {
 
                   {generatedVideoUrl ? (
                     <div className="space-y-5">
-                      <div className="rounded-2xl bg-black aspect-video flex items-center justify-center overflow-hidden shadow-sm border border-gray-100">
+                      <div className={`rounded-2xl bg-black flex items-center justify-center overflow-hidden shadow-sm border border-gray-100 mx-auto w-full transition-all duration-300 ${
+                        videoRatio === '9:16' 
+                          ? 'aspect-[9/16] max-w-xs sm:max-w-sm' 
+                          : videoRatio === '1:1' 
+                            ? 'aspect-square max-w-md' 
+                            : 'aspect-video'
+                      }`}>
                         <video
                           src={generatedVideoUrl}
                           controls
