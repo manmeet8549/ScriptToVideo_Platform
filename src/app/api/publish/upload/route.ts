@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { decrypt, encrypt } from '@/lib/encryption';
 import { getPublisher } from '@/lib/publishers';
+import { validateZernioConfig } from '@/lib/env';
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -84,10 +85,13 @@ export async function POST(request: NextRequest) {
         channelName: account.channelName,
       });
 
-      // Fire off background worker for this target
       const runBackgroundUpload = async () => {
         const isYouTube = account.platform === 'youtube';
         try {
+          if (!isYouTube && !validateZernioConfig().isConfigured) {
+            throw new Error('Social publishing is temporarily unavailable. Please configure ZERNIO_API_KEY.');
+          }
+
           if (isYouTube) {
             console.log(`[YOUTUBE_UPLOAD_START] Starting upload for user: ${userId}, channelId: ${account.id}, videoId: ${video.id}`);
           }

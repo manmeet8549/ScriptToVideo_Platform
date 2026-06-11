@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface ThinkNextLogoProps {
   variant?: 'full' | 'compact';
@@ -24,11 +25,14 @@ export default function ThinkNextLogo({
     <div className={`flex flex-col select-none ${className}`}>
       {/* Main Official SVG Logo */}
       <div className="flex items-center">
-        <img
+        <Image
           src="/ThinkNEXT-LOGO-NEW.svg"
           alt="ThinkNEXT Logo"
+          width={200}
+          height={80}
           className={`${heightClass} w-auto object-contain`}
           draggable={false}
+          priority
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useAppStore } from '@/store/store';
 import { Card } from '@/components/ui/card';
@@ -252,9 +253,11 @@ export default function TemplatesList() {
               >
                 {/* Visual Preview Container */}
                 <div className="relative h-44 rounded-2xl overflow-hidden bg-neutral-100 group border border-neutral-100">
-                  <img 
+                  <Image 
                     src={t.imageUrl} 
                     alt={t.title} 
+                    fill
+                    unoptimized
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -304,9 +307,11 @@ export default function TemplatesList() {
                 >
                   {/* Top rounded container with image preview + play button */}
                   <div className="relative h-36 rounded-2xl overflow-hidden bg-neutral-100 group border border-neutral-100/60">
-                    <img 
+                    <Image 
                       src={t.imageUrl} 
                       alt={t.title} 
+                      fill
+                      unoptimized
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">

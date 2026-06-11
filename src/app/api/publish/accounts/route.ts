@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { validateZernioConfig } from '@/lib/env';
 
 export async function GET() {
   const session = await auth();
@@ -25,7 +26,10 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ accounts });
+    return NextResponse.json({ 
+      accounts,
+      zernioConfigured: validateZernioConfig().isConfigured
+    });
   } catch (error) {
     console.error('[PUBLISH_ACCOUNTS] Error listing accounts:', error);
     return NextResponse.json({ error: 'Failed to retrieve social accounts' }, { status: 500 });

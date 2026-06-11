@@ -142,7 +142,7 @@ export default function PublishSection() {
   const videos = useMemo(() => videosData?.videos ?? [], [videosData?.videos]);
 
   // Fetch Connected Accounts
-  const { data: accountsData, refetch: refetchAccounts } = useQuery<{ accounts: SocialAccount[] }>({
+  const { data: accountsData, refetch: refetchAccounts } = useQuery<{ accounts: SocialAccount[]; zernioConfigured: boolean }>({
     queryKey: ['publishAccounts'],
     queryFn: async () => {
       const res = await fetch('/api/publish/accounts');
@@ -151,6 +151,7 @@ export default function PublishSection() {
     },
   });
   const accounts = useMemo(() => accountsData?.accounts ?? [], [accountsData?.accounts]);
+  const zernioConfigured = accountsData?.zernioConfigured ?? true;
 
   // Fetch Published History
   const { data: historyData, refetch: refetchHistory } = useQuery<{ publishedVideos: PublishedVideo[] }>({
@@ -558,6 +559,16 @@ export default function PublishSection() {
         <h3 className="font-extrabold text-lg text-black font-sans leading-tight">
           Social Channels Integration
         </h3>
+
+        {!zernioConfigured && (
+          <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold rounded-2xl flex items-start gap-2.5">
+            <Info className="h-4.5 w-4.5 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <span className="font-extrabold block mb-0.5">Social Publishing is Temporarily Unavailable</span>
+              LinkedIn, Facebook, Instagram, and X (Twitter) publishing features are disabled because ZERNIO_API_KEY is not configured in the environment. YouTube publishing remains fully operational.
+            </div>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
@@ -588,8 +599,9 @@ export default function PublishSection() {
 
                     <button
                       onClick={() => handleConnect(platform.id)}
-                      className="h-8 w-8 flex items-center justify-center rounded-full bg-neutral-50 border border-gray-200 text-gray-500 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
-                      title={`Connect another ${platform.label} account`}
+                      disabled={platform.id !== 'youtube' && !zernioConfigured}
+                      className="h-8 w-8 flex items-center justify-center rounded-full bg-neutral-50 border border-gray-200 text-gray-500 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={platform.id !== 'youtube' && !zernioConfigured ? "Configure ZERNIO_API_KEY to connect" : `Connect another ${platform.label} account`}
                     >
                       <Plus className="h-4.5 w-4.5" />
                     </button>
@@ -753,16 +765,18 @@ export default function PublishSection() {
                           const isChecked = selectedPlatforms[plat.id];
                           const platformAccounts = accounts.filter((a) => a.platform === plat.id);
                           const isConnected = platformAccounts.length > 0;
+                          const isDisabled = plat.id !== 'youtube' && !zernioConfigured;
 
                           return (
-                            <div key={plat.id} className={`p-4 border rounded-2xl transition-all ${isChecked ? 'border-black bg-neutral-50/20' : 'border-gray-150 bg-white'}`}>
+                            <div key={plat.id} className={`p-4 border rounded-2xl transition-all ${isChecked ? 'border-black bg-neutral-50/20' : 'border-gray-150 bg-white'} ${isDisabled ? 'opacity-40' : ''}`}>
                               <div className="flex items-center justify-between">
-                                <label className="flex items-center gap-2.5 text-xs font-bold text-black cursor-pointer">
+                                <label className={`flex items-center gap-2.5 text-xs font-bold text-black ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
                                   <input
                                     type="checkbox"
                                     checked={isChecked}
+                                    disabled={isDisabled}
                                     onChange={() => togglePlatform(plat.id)}
-                                    className="h-4 w-4 rounded-sm text-black focus:ring-black accent-black cursor-pointer"
+                                    className="h-4 w-4 rounded-sm text-black focus:ring-black accent-black cursor-pointer disabled:cursor-not-allowed"
                                   />
                                   <div className="flex items-center gap-1.5">
                                     {getPlatformIcon(plat.id, "h-4 w-4")}
@@ -772,7 +786,8 @@ export default function PublishSection() {
                                 {!isConnected && (
                                   <button
                                     onClick={() => handleConnect(plat.id)}
-                                    className="text-[9px] font-bold text-red-500 bg-red-50 hover:bg-red-100/60 border border-red-100 px-2 py-0.5 rounded-full cursor-pointer"
+                                    disabled={isDisabled}
+                                    className="text-[9px] font-bold text-red-500 bg-red-50 hover:bg-red-100/60 border border-red-100 px-2 py-0.5 rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
                                     Connect
                                   </button>

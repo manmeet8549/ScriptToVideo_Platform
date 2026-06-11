@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getZernioConnectUrl, getOrCreateZernioProfileId } from '@/services/zernio';
+import { validateZernioConfig } from '@/lib/env';
 
 export async function GET(
   request: NextRequest,
@@ -14,6 +15,14 @@ export async function GET(
   const { platform } = params;
   if (!platform) {
     return NextResponse.json({ error: 'Platform parameter is required' }, { status: 400 });
+  }
+
+  const config = validateZernioConfig();
+  if (!config.isConfigured) {
+    return NextResponse.json(
+      { error: 'Social publishing is temporarily unavailable. Please configure ZERNIO_API_KEY.' },
+      { status: 400 }
+    );
   }
 
   try {

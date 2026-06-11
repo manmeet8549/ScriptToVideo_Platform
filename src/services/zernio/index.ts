@@ -1,4 +1,4 @@
-import { zernio } from '@/lib/zernio';
+import { getZernioClient } from '@/lib/zernio';
 
 export type ZernioPlatform = 'facebook' | 'instagram' | 'linkedin' | 'twitter';
 
@@ -23,7 +23,8 @@ export async function getZernioConnectUrl(
   redirectUrl: string
 ): Promise<string> {
   const zernioPlatform = mapPlatform(platform);
-  const response = await zernio.connect.getConnectUrl({
+  const client = getZernioClient();
+  const response = await client.connect.getConnectUrl({
     path: { platform: zernioPlatform },
     query: {
       profileId,
@@ -42,7 +43,8 @@ export async function getZernioConnectUrl(
  * Fetches Zernio profiles to find the default profile or first profile.
  */
 export async function getOrCreateZernioProfileId(): Promise<string> {
-  const response = await zernio.profiles.listProfiles();
+  const client = getZernioClient();
+  const response = await client.profiles.listProfiles();
   const profiles = response.data?.profiles || [];
 
   if (profiles.length > 0) {
@@ -53,7 +55,7 @@ export async function getOrCreateZernioProfileId(): Promise<string> {
   }
 
   // Create a default profile if none exists
-  const createResponse = await zernio.profiles.createProfile({
+  const createResponse = await client.profiles.createProfile({
     body: {
       name: 'Default',
     },
@@ -78,6 +80,7 @@ export async function createZernioPost(params: {
   title?: string;
 }) {
   const zernioPlatform = mapPlatform(params.platform);
+  const client = getZernioClient();
   
   const body = {
     title: params.title || 'Published Video',
@@ -97,7 +100,7 @@ export async function createZernioPost(params: {
     publishNow: params.publishNow !== false, // default to true
   };
 
-  const response = await zernio.posts.createPost({ body });
+  const response = await client.posts.createPost({ body });
 
   if (!response.data?.post?._id) {
     throw new Error(`Failed to create post on Zernio: ${JSON.stringify(response.error || response)}`);

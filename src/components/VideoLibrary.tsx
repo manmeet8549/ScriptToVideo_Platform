@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -115,9 +116,11 @@ function VideoCard({
         {isPlayingPreview && video.videoUrl ? (
           <div className="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden z-10">
             {video.thumbnailUrl ? (
-              <img 
+              <Image 
                 src={video.thumbnailUrl} 
                 alt="" 
+                fill
+                unoptimized
                 className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
               />
             ) : null}
@@ -138,15 +141,19 @@ function VideoCard({
             console.log(`[VIDEOLIBRARY_CARD_THUMBNAIL] Video: "${video.title}" (ID: ${video.id}), Thumbnail URL: ${video.thumbnailUrl}`);
             return (
               <div className="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden">
-                <img 
+                <Image 
                   src={video.thumbnailUrl} 
                   alt="" 
+                  fill
+                  unoptimized
                   className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
                 />
-                <img 
+                <Image 
                   src={video.thumbnailUrl} 
                   alt={video.title} 
-                  className="relative z-10 max-w-full max-h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
+                  fill
+                  unoptimized
+                  className="relative z-10 w-full h-full object-contain select-none pointer-events-none transition-transform duration-300 group-hover:scale-105" 
                   onLoad={() => console.log(`[VIDEOLIBRARY_CARD_THUMBNAIL] Thumbnail loaded successfully for Video ID: ${video.id}`)}
                   onError={() => console.error(`[VIDEOLIBRARY_CARD_THUMBNAIL] Failed to load thumbnail image for Video ID: ${video.id}, URL: ${video.thumbnailUrl}`)}
                 />
@@ -537,9 +544,11 @@ export default function VideoLibrary() {
                         : 'aspect-video'
                   }`}>
                     {activeWatchVideo.thumbnailUrl ? (
-                      <img 
+                      <Image 
                         src={activeWatchVideo.thumbnailUrl} 
                         alt="" 
+                        fill
+                        unoptimized
                         className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
                       />
                     ) : null}
