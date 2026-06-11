@@ -28,21 +28,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Video not found or access denied.' }, { status: 404 });
     }
 
+    // 1.5 Fetch and validate accounts and verify environment variables for YouTube
+    const accountIds = targets.map((t: { socialAccountId: string }) => t.socialAccountId);
+    const targetAccounts = await db.socialAccount.findMany({
+      where: {
+        id: { in: accountIds },
+        userId,
+      },
+    });
+
+    const hasYouTubeTarget = targetAccounts.some((a) => a.platform === 'youtube');
+    if (hasYouTubeTarget) {
+      const requiredVars = [
+        'GOOGLE_CLIENT_ID',
+        'GOOGLE_CLIENT_SECRET',
+        'NEXTAUTH_URL',
+        'NEXTAUTH_SECRET',
+      ];
+      for (const v of requiredVars) {
+        if (!process.env[v]) {
+          const errMsg = `❌ Google API credentials not configured. Missing environment variable: ${v}`;
+          console.error(`[YOUTUBE_UPLOAD_FAILED] Missing environment variable: ${v}`);
+          return NextResponse.json({ error: errMsg }, { status: 400 });
+        }
+      }
+    }
+
     const initiatedUploads = [];
 
     // 2. Loop through all targets, validate accounts, and create PublishedVideo records
     for (const target of targets) {
       const { socialAccountId, title, description, tags, visibility, caption, tweetText } = target;
 
-      const account = await db.socialAccount.findFirst({
-        where: { id: socialAccountId, userId },
-      });
+      const account = targetAccounts.find((a) => a.id === socialAccountId);
 
       if (!account) {
         return NextResponse.json({ error: `Social account ${socialAccountId} not found or unauthorized` }, { status: 400 });
       }
 
-      // Create PublishedVideo record with Preparing status
+      // Create PublishedVideo record with "Preparing video..." status
       const publishedVideo = await db.publishedVideo.create({
         data: {
           userId,
@@ -50,7 +74,7 @@ export async function POST(request: NextRequest) {
           socialAccountId: account.id,
           platform: account.platform,
           title: title || caption || tweetText || 'Untitled Publication',
-          status: 'Preparing Upload',
+          status: 'Preparing video...',
         },
       });
 
@@ -62,7 +86,12 @@ export async function POST(request: NextRequest) {
 
       // Fire off background worker for this target
       const runBackgroundUpload = async () => {
+        const isYouTube = account.platform === 'youtube';
         try {
+          if (isYouTube) {
+            console.log(`[YOUTUBE_UPLOAD_START] Starting upload for user: ${userId}, channelId: ${account.id}, videoId: ${video.id}`);
+          }
+
           // Decrypt tokens
           let accessToken = '';
           let refreshToken: string | null = null;
@@ -94,6 +123,9 @@ export async function POST(request: NextRequest) {
 
           const onProgress = async (bytesUploaded: number, totalBytes: number) => {
             const percent = Math.round((bytesUploaded / totalBytes) * 100);
+            if (isYouTube) {
+              console.log(`[YOUTUBE_UPLOAD_PROGRESS] Progress: ${percent}% (${bytesUploaded}/${totalBytes} bytes) for video ${video.id}`);
+            }
             await db.publishedVideo.update({
               where: { id: publishedVideo.id },
               data: { status: `Uploading: ${percent}%` },
@@ -113,18 +145,20 @@ export async function POST(request: NextRequest) {
             onProgress
           );
 
+          const processingStatus = isYouTube ? 'Processing on YouTube...' : 'Processing...';
+
           // Mark as Processing
           await db.publishedVideo.update({
             where: { id: publishedVideo.id },
             data: {
-              status: 'Processing',
+              status: processingStatus,
               externalVideoId: result.externalVideoId,
               videoUrl: result.videoUrl,
             },
           });
 
           // Wait for processing
-          const isMockMode = !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || process.env.MOCK_PUBLISH === 'true' || account.platform !== 'youtube';
+          const isMockMode = !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || process.env.MOCK_PUBLISH === 'true' || !isYouTube;
 
           if (isMockMode) {
             await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -167,8 +201,15 @@ export async function POST(request: NextRequest) {
               },
             });
           }
+
+          if (isYouTube) {
+            console.log(`[YOUTUBE_UPLOAD_SUCCESS] Uploaded successfully! Video ID: ${result.externalVideoId}, URL: ${result.videoUrl}`);
+          }
         } catch (err) {
           console.error(`[BACKGROUND_UPLOAD] Failed for published video ${publishedVideo.id}:`, err);
+          if (isYouTube) {
+            console.error(`[YOUTUBE_UPLOAD_FAILED] YouTube upload failed. userId: ${userId}, channelId: ${account.id}, videoId: ${video.id}, error message: ${err instanceof Error ? err.message : String(err)}`);
+          }
           await db.publishedVideo.update({
             where: { id: publishedVideo.id },
             data: {

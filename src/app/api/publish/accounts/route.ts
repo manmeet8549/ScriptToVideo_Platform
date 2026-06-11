@@ -18,6 +18,8 @@ export async function GET() {
         channelName: true,
         connectedAt: true,
         isDefault: true,
+        channelId: true,
+        subscriberCount: true,
       },
     });
 
@@ -68,6 +70,8 @@ export async function PATCH(request: NextRequest) {
           channelName: true,
           connectedAt: true,
           isDefault: true,
+          channelId: true,
+          subscriberCount: true,
         }
       });
 

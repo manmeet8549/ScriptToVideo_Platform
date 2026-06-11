@@ -10,7 +10,7 @@ export async function refreshGoogleToken(refreshToken: string): Promise<{ access
   const client_secret = process.env.GOOGLE_CLIENT_SECRET;
 
   if (!client_id || !client_secret) {
-    throw new Error('Google OAuth credentials not configured.');
+    throw new Error('❌ Google API credentials not configured.');
   }
 
   const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -28,7 +28,8 @@ export async function refreshGoogleToken(refreshToken: string): Promise<{ access
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Failed to refresh Google OAuth token: ${res.status} ${res.statusText} - ${errText}`);
+    console.error(`[YOUTUBE_PUBLISHER] Token refresh failed. Status: ${res.status}, Response: ${errText}`);
+    throw new Error(`❌ OAuth token expired: ${res.status} ${res.statusText} - ${errText}`);
   }
 
   const data = await res.json();
@@ -61,27 +62,30 @@ export class YouTubePublisher implements Publisher {
    * Helper to get a valid access token. Refreshes if expired.
    */
   private async getValidAccessToken(): Promise<string> {
-    // If no expiry or not expired yet (with 2 min buffer), return current
     const twoMinutes = 2 * 60 * 1000;
-    if (!this.tokenExpiry || this.tokenExpiry.getTime() - twoMinutes > Date.now()) {
+    if (this.tokenExpiry && this.tokenExpiry.getTime() - twoMinutes > Date.now()) {
       return this.decryptedAccessToken;
     }
 
     if (!this.decryptedRefreshToken) {
-      throw new Error('Access token is expired and no refresh token is available.');
+      throw new Error('❌ OAuth token expired.');
     }
 
     console.log('[YOUTUBE_PUBLISHER] Access token expired. Refreshing token...');
-    const refreshed = await refreshGoogleToken(this.decryptedRefreshToken);
+    try {
+      const refreshed = await refreshGoogleToken(this.decryptedRefreshToken);
+      this.decryptedAccessToken = refreshed.accessToken;
+      this.tokenExpiry = refreshed.expiresAt;
 
-    this.decryptedAccessToken = refreshed.accessToken;
-    this.tokenExpiry = refreshed.expiresAt;
+      if (this.onTokenRefreshed) {
+        await this.onTokenRefreshed(refreshed.accessToken, refreshed.expiresAt);
+      }
 
-    if (this.onTokenRefreshed) {
-      await this.onTokenRefreshed(refreshed.accessToken, refreshed.expiresAt);
+      return refreshed.accessToken;
+    } catch (err) {
+      console.error('[YOUTUBE_PUBLISHER] Token refresh procedure encountered an error:', err);
+      throw new Error('❌ OAuth token expired.');
     }
-
-    return refreshed.accessToken;
   }
 
   async publish(
@@ -89,19 +93,51 @@ export class YouTubePublisher implements Publisher {
     options: PublishOptions,
     onProgress?: ProgressCallback
   ): Promise<PublishResult> {
-    const client_id = process.env.GOOGLE_CLIENT_ID;
-    const client_secret = process.env.GOOGLE_CLIENT_SECRET;
+    try {
+      const client_id = process.env.GOOGLE_CLIENT_ID;
+      const client_secret = process.env.GOOGLE_CLIENT_SECRET;
 
-    // Check if we are in Mock Developer Mode
-    const isMockMode = !client_id || !client_secret || process.env.MOCK_PUBLISH === 'true';
+      // Completely disable mock publishing in production
+      const isMockMode = process.env.NODE_ENV !== 'production' && process.env.MOCK_PUBLISH === 'true';
 
-    if (isMockMode) {
-      console.log('[YOUTUBE_PUBLISHER] Google API credentials missing or MOCK_PUBLISH active. Running in MOCK DEVELOPER MODE...');
-      return this.simulateMockPublish(videoR2Key, options, onProgress);
-    }
+      if (!client_id || !client_secret) {
+        if (!isMockMode) {
+          throw new Error('❌ Google API credentials not configured.');
+        }
+      }
 
-    // 1. Get valid access token (refreshes if needed)
-    const token = await this.getValidAccessToken();
+      if (isMockMode && (!client_id || !client_secret)) {
+        console.log('[YOUTUBE_PUBLISHER] Google API credentials missing. Running in MOCK DEVELOPER MODE...');
+        return this.simulateMockPublish(videoR2Key, options, onProgress);
+      }
+
+      // 1. Get valid access token (refreshes if needed)
+      const token = await this.getValidAccessToken();
+
+      // 1.5 Verify channel ownership before upload
+      console.log('[YOUTUBE_PUBLISHER] Verifying channel ownership and credentials...');
+      const verifyRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!verifyRes.ok) {
+        const errText = await verifyRes.text();
+        console.error(`[YOUTUBE_PUBLISHER] channels.list failed. Status: ${verifyRes.status}, Response: ${errText}`);
+        throw new Error(`❌ YouTube upload failed: Channel verification failed: ${verifyRes.status} - ${errText}`);
+      }
+
+      const verifyData = await verifyRes.json();
+      if (!verifyData.items || verifyData.items.length === 0) {
+        throw new Error('❌ YouTube upload failed: No YouTube channel found for this Google account.');
+      }
+
+      const channel = verifyData.items[0];
+      const channelId = channel.id;
+      const channelTitle = channel.snippet?.title || 'Unknown';
+      const subCount = channel.statistics?.subscriberCount || '0';
+      console.log(`[YOUTUBE_PUBLISHER] Verified Channel: ${channelTitle} (ID: ${channelId}, Subscribers: ${subCount})`);
 
     // 2. Fetch video size from Cloudflare R2 via S3 SDK
     console.log(`[YOUTUBE_PUBLISHER] Probing file size in R2 for key: "${videoR2Key}"`);
@@ -155,6 +191,7 @@ export class YouTubePublisher implements Publisher {
 
     if (!initRes.ok) {
       const errText = await initRes.text();
+      console.error(`[YOUTUBE_PUBLISHER] videos.insert (initiate) failed. Status: ${initRes.status}, Response: ${errText}`);
       throw new Error(`Failed to initiate YouTube upload session: ${initRes.status} - ${errText}`);
     }
 
@@ -208,6 +245,10 @@ export class YouTubePublisher implements Publisher {
         // Final upload complete!
         const videoData = await ytPutRes.json();
         const externalVideoId = videoData.id;
+        if (!externalVideoId) {
+          console.error('[YOUTUBE_PUBLISHER] Final response from YouTube did not contain video ID:', videoData);
+          throw new Error('YouTube API response missing video ID.');
+        }
         console.log(`[YOUTUBE_PUBLISHER] Upload completed successfully! YouTube Video ID: ${externalVideoId}`);
         
         return {
@@ -216,11 +257,20 @@ export class YouTubePublisher implements Publisher {
         };
       } else {
         const errText = await ytPutRes.text();
+        console.error(`[YOUTUBE_PUBLISHER] Chunk upload failed. Status: ${ytPutRes.status}, Response: ${errText}`);
         throw new Error(`YouTube chunk upload failed at range ${startByte}-${endByte}: ${ytPutRes.status} - ${errText}`);
       }
     }
 
     throw new Error('Resumable upload loop terminated without a final response.');
+    } catch (err) {
+      console.error('[YOUTUBE_PUBLISHER] Publish failed:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.startsWith('❌')) {
+        throw err;
+      }
+      throw new Error(`❌ YouTube upload failed: ${msg}`);
+    }
   }
 
   /**

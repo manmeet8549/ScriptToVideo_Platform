@@ -67,6 +67,8 @@ interface SocialAccount {
   channelName: string | null;
   connectedAt: string;
   isDefault: boolean;
+  channelId?: string | null;
+  subscriberCount?: string | null;
 }
 
 interface PublishedVideo {
@@ -87,6 +89,7 @@ interface TrackingUpload {
   platform: string;
   channelName: string | null;
   status: string;
+  videoUrl?: string | null;
 }
 
 export default function PublishSection() {
@@ -425,9 +428,11 @@ export default function PublishSection() {
             if (res.ok) {
               const data = await res.json();
               const newStatus = data.publishedVideo.status;
+              const newUrl = data.publishedVideo.videoUrl;
               
-              if (upload.status !== newStatus) {
+              if (upload.status !== newStatus || upload.videoUrl !== newUrl) {
                 updatedUploads[idx].status = newStatus;
+                updatedUploads[idx].videoUrl = newUrl;
                 hasChanges = true;
               }
             }
@@ -568,7 +573,7 @@ export default function PublishSection() {
                   </div>
 
                   {/* Connected Accounts List */}
-                  <div className="flex-1 overflow-y-auto max-h-20 space-y-1.5 pr-1 scrollbar-thin">
+                  <div className="flex-1 overflow-y-auto max-h-24 space-y-1.5 pr-1 scrollbar-thin">
                     {platformAccounts.length > 0 ? (
                       platformAccounts
                         .sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
@@ -576,11 +581,18 @@ export default function PublishSection() {
                           const isDefault = acc.isDefault;
                           return (
                             <div key={acc.id} className={`flex justify-between items-center p-2 rounded-xl text-xs font-semibold ${isDefault ? 'bg-indigo-50 border border-indigo-100 text-indigo-950 shadow-2xs' : 'bg-neutral-50 border border-gray-100 text-gray-700'}`}>
-                              <div className="flex items-center gap-1.5 truncate max-w-[65%]">
-                                {isDefault && <Star className="h-3 w-3 fill-indigo-500 text-indigo-500 shrink-0" />}
-                                <span className="truncate" title={acc.channelName || acc.email || 'Account'}>
-                                  {acc.channelName || acc.email}
-                                </span>
+                              <div className="flex flex-col min-w-0 flex-1 py-0.5 max-w-[65%]">
+                                <div className="flex items-center gap-1 truncate max-w-full">
+                                  {isDefault && <Star className="h-3 w-3 fill-indigo-500 text-indigo-500 shrink-0" />}
+                                  <span className="truncate" title={`${acc.channelName || acc.email || 'Account'}${acc.channelId ? `\nChannel ID: ${acc.channelId}` : ''}${acc.subscriberCount ? `\nSubscribers: ${Number(acc.subscriberCount).toLocaleString()}` : ''}`}>
+                                    {acc.channelName || acc.email}
+                                  </span>
+                                </div>
+                                {acc.platform === 'youtube' && acc.channelId && (
+                                  <span className="text-[9px] text-gray-400 font-medium block truncate max-w-full mt-0.5" title={`Channel ID: ${acc.channelId}`}>
+                                    ID: {acc.channelId} {acc.subscriberCount ? `• ${Number(acc.subscriberCount).toLocaleString()} subs` : ''}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <button
@@ -970,19 +982,24 @@ export default function PublishSection() {
 
               {activeUploads.length > 0 ? (
                 <div className="space-y-5">
-                  {activeUploads.map((upload) => {
+                   {activeUploads.map((upload) => {
                     let percent = 0;
                     if (upload.status.startsWith('Uploading:')) {
                       const match = upload.status.match(/\d+/);
                       if (match) percent = parseInt(match[0]);
-                    } else if (upload.status === 'Processing') {
+                    } else if (upload.status.startsWith('Processing')) {
                       percent = 90;
                     } else if (upload.status === 'Published') {
                       percent = 100;
                     }
 
+                    const isSuccess = upload.status === 'Published';
+                    const videoUrl = upload.videoUrl;
+
                     return (
-                      <div key={upload.id} className="p-4 bg-neutral-50/50 border border-gray-150 rounded-2xl space-y-3">
+                      <div key={upload.id} className={`p-4 border rounded-2xl space-y-3 ${
+                        isSuccess ? 'bg-emerald-50/20 border-emerald-100' : 'bg-neutral-50/50 border-gray-150'
+                      }`}>
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2 min-w-0">
                             {getPlatformIcon(upload.platform, "h-4 w-4")}
@@ -991,32 +1008,73 @@ export default function PublishSection() {
                             </span>
                           </div>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            upload.status === 'Published'
+                            isSuccess
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                               : upload.status.startsWith('Failed')
                               ? 'bg-red-50 text-red-700 border border-red-100'
                               : 'bg-blue-50 text-blue-700 border border-blue-100'
                           }`}>
-                            {upload.status}
+                            {isSuccess ? 'Upload Complete' : upload.status.startsWith('Failed') ? 'Failed' : upload.status}
                           </span>
                         </div>
 
-                        {/* Progress Bar */}
-                        <div className="space-y-1.5">
-                          <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden border border-neutral-150">
-                            <motion.div
-                              className={`h-full rounded-full ${
-                                upload.status.startsWith('Failed') ? 'bg-red-500' : 'bg-black'
-                              }`}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${percent}%` }}
-                              transition={{ duration: 0.5 }}
-                            />
+                        {/* Progress Bar & Status Details */}
+                        {!isSuccess ? (
+                          <div className="space-y-1.5">
+                            {upload.status.startsWith('Failed') ? (
+                              <div className="text-[11px] font-semibold text-red-600 block mt-1 leading-relaxed">
+                                {upload.status.replace('Failed: ', '❌ ')}
+                              </div>
+                            ) : (
+                              <>
+                                <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden border border-neutral-150">
+                                  <motion.div
+                                    className="h-full rounded-full bg-black"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${percent}%` }}
+                                    transition={{ duration: 0.5 }}
+                                  />
+                                </div>
+                                <span className="text-[9px] text-gray-400 font-bold block text-right">
+                                  {percent}% Complete
+                                </span>
+                              </>
+                            )}
                           </div>
-                          <span className="text-[9px] text-gray-400 font-bold block text-right">
-                            {percent}% Complete
-                          </span>
-                        </div>
+                        ) : (
+                          <div className="pt-2 border-t border-emerald-100/50 space-y-2">
+                            <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                              ✅ Upload Successful
+                            </div>
+                            {videoUrl && (
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-semibold text-gray-500 block">Video URL:</span>
+                                <span className="text-[10px] font-mono bg-white border border-gray-150 p-1.5 rounded-lg block truncate select-all">
+                                  {videoUrl}
+                                </span>
+                                <div className="flex gap-2">
+                                  <a
+                                    href={videoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] font-extrabold text-black hover:underline inline-flex items-center gap-0.5"
+                                  >
+                                    View on YouTube
+                                  </a>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(videoUrl);
+                                      alert('Link copied to clipboard!');
+                                    }}
+                                    className="text-[10px] font-extrabold text-neutral-600 hover:text-black cursor-pointer"
+                                  >
+                                    Copy Link
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1099,6 +1157,11 @@ export default function PublishSection() {
                         <span className="text-[10px] text-gray-400 font-semibold block">
                           Published {new Date(pv.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
                         </span>
+                        {pv.status.startsWith('Failed') && (
+                          <span className="text-[10px] font-bold text-red-500 block mt-1">
+                            {pv.status.replace('Failed: ', '❌ ')}
+                          </span>
+                        )}
                       </div>
                       {getStatusBadge(pv.status)}
                     </div>

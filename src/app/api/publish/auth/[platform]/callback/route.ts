@@ -32,6 +32,9 @@ export async function GET(
     let refreshToken: string | null = `mock-${platformLower}-refresh-token`;
     let expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
 
+    let channelId: string | null = null;
+    let subscriberCount: string | null = null;
+
     const client_id = platformLower === 'youtube' ? process.env.GOOGLE_CLIENT_ID : null;
     const client_secret = platformLower === 'youtube' ? process.env.GOOGLE_CLIENT_SECRET : null;
     const isMockMode = !client_id || !client_secret || code.startsWith('mock-') || process.env.MOCK_PUBLISH === 'true';
@@ -72,8 +75,8 @@ export async function GET(
         email = profile.email || email;
       }
 
-      // Fetch YouTube channel name
-      const channelRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
+      // Fetch YouTube channel name, channelId, and subscriberCount
+      const channelRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', {
         headers: { 'Authorization': `Bearer ${accessToken}` },
       });
       if (channelRes.ok) {
@@ -81,6 +84,8 @@ export async function GET(
         const firstChannel = channelData.items?.[0];
         if (firstChannel) {
           channelName = firstChannel.snippet?.title || channelName;
+          channelId = firstChannel.id || null;
+          subscriberCount = firstChannel.statistics?.subscriberCount || null;
         }
       }
     } else {
@@ -99,6 +104,11 @@ export async function GET(
         email = queryEmail;
       } else {
         email = `${platformLower}-creator@thinknext.com`;
+      }
+
+      if (platformLower === 'youtube') {
+        channelId = `UC-mock-yt-${Math.random().toString(36).substring(7)}`;
+        subscriberCount = '12500';
       }
     }
 
@@ -125,6 +135,8 @@ export async function GET(
           refreshToken: encryptedRefreshToken || undefined,
           tokenExpiry: expiresAt,
           connectedAt: new Date(),
+          channelId,
+          subscriberCount,
         },
       });
     } else {
@@ -147,6 +159,8 @@ export async function GET(
           refreshToken: encryptedRefreshToken,
           tokenExpiry: expiresAt,
           isDefault,
+          channelId,
+          subscriberCount,
         },
       });
     }

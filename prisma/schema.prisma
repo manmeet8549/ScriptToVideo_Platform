@@ -261,10 +261,12 @@ model SocialAccount {
   accessToken  String    @db.Text
   refreshToken String?   @db.Text
   tokenExpiry  DateTime?
-  isDefault    Boolean   @default(false)
-  connectedAt  DateTime  @default(now())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  isDefault       Boolean   @default(false)
+  channelId       String?
+  subscriberCount String?
+  connectedAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   publishedVideos PublishedVideo[]
