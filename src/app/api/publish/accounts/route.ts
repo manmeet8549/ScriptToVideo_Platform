@@ -20,6 +20,8 @@ export async function GET() {
         isDefault: true,
         channelId: true,
         subscriberCount: true,
+        zernioAccountId: true,
+        accountHandle: true,
       },
     });
 
@@ -72,6 +74,8 @@ export async function PATCH(request: NextRequest) {
           isDefault: true,
           channelId: true,
           subscriberCount: true,
+          zernioAccountId: true,
+          accountHandle: true,
         }
       });
 
@@ -97,9 +101,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === 'disconnect' || action === 'delete') {
+      await db.socialAccount.delete({
+        where: { id: accountId },
+      });
+      return NextResponse.json({ success: true });
+    }
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('[PUBLISH_ACCOUNTS_PATCH] Error updating account:', error);
     return NextResponse.json({ error: 'Failed to update account' }, { status: 500 });
   }
 }
+

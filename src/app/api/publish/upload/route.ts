@@ -154,11 +154,18 @@ export async function POST(request: NextRequest) {
               status: processingStatus,
               externalVideoId: result.externalVideoId,
               videoUrl: result.videoUrl,
+              postId: isYouTube ? null : result.externalVideoId,
             },
           });
 
-          // Wait for processing
-          const isMockMode = !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || process.env.MOCK_PUBLISH === 'true' || !isYouTube;
+          // If not YouTube (i.e. Zernio platform), we wait for Zernio webhook events to transition the status.
+          if (!isYouTube) {
+            console.log(`[ZERNIO_UPLOAD_SUCCESS] Dispatched successfully! Post ID: ${result.externalVideoId}. Waiting for webhook confirmation...`);
+            return;
+          }
+
+          // YouTube processing checks
+          const isMockMode = !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || process.env.MOCK_PUBLISH === 'true';
 
           if (isMockMode) {
             await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -202,9 +209,7 @@ export async function POST(request: NextRequest) {
             });
           }
 
-          if (isYouTube) {
-            console.log(`[YOUTUBE_UPLOAD_SUCCESS] Uploaded successfully! Video ID: ${result.externalVideoId}, URL: ${result.videoUrl}`);
-          }
+          console.log(`[YOUTUBE_UPLOAD_SUCCESS] Uploaded successfully! Video ID: ${result.externalVideoId}, URL: ${result.videoUrl}`);
         } catch (err) {
           console.error(`[BACKGROUND_UPLOAD] Failed for published video ${publishedVideo.id}:`, err);
           if (isYouTube) {

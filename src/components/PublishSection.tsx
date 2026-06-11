@@ -69,6 +69,8 @@ interface SocialAccount {
   isDefault: boolean;
   channelId?: string | null;
   subscriberCount?: string | null;
+  zernioAccountId?: string | null;
+  accountHandle?: string | null;
 }
 
 interface PublishedVideo {
@@ -126,7 +128,7 @@ export default function PublishSection() {
   // State - Workers & Polling
   const [activeUploads, setActiveUploads] = useState<TrackingUpload[]>([]);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
-  const [historyTab, setHistoryTab] = useState<'all' | 'published' | 'pending' | 'failed'>('all');
+  const [historyTab, setHistoryTab] = useState<'all' | 'published' | 'scheduled' | 'pending' | 'failed'>('all');
 
   // Fetch Videos
   const { data: videosData } = useQuery<{ videos: VideoItem[] }>({
@@ -274,9 +276,29 @@ export default function PublishSection() {
     }
   };
 
-  const handleConnect = (platform: string) => {
-    // Redirects to dynamic OAuth path
-    window.location.href = `/api/publish/auth/${platform}`;
+  const handleConnect = async (platform: string) => {
+    const platformLower = platform.toLowerCase();
+    if (platformLower === 'youtube') {
+      window.location.href = `/api/publish/auth/youtube`;
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/social/connect/${platformLower}`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to generate Zernio connection URL');
+      }
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Connection URL was not returned');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to connect account.');
+    }
   };
 
   const togglePlatform = (platform: string) => {
@@ -469,8 +491,9 @@ export default function PublishSection() {
   const filteredHistory = publishedVideos.filter((pv) => {
     if (historyTab === 'published') return pv.status === 'Published';
     if (historyTab === 'failed') return pv.status.startsWith('Failed');
+    if (historyTab === 'scheduled') return pv.status === 'Scheduled';
     if (historyTab === 'pending') {
-      return pv.status !== 'Published' && !pv.status.startsWith('Failed');
+      return pv.status !== 'Published' && !pv.status.startsWith('Failed') && pv.status !== 'Scheduled';
     }
     return true; // 'all'
   });
@@ -591,6 +614,11 @@ export default function PublishSection() {
                                 {acc.platform === 'youtube' && acc.channelId && (
                                   <span className="text-[9px] text-gray-400 font-medium block truncate max-w-full mt-0.5" title={`Channel ID: ${acc.channelId}`}>
                                     ID: {acc.channelId} {acc.subscriberCount ? `• ${Number(acc.subscriberCount).toLocaleString()} subs` : ''}
+                                  </span>
+                                )}
+                                {acc.platform !== 'youtube' && acc.accountHandle && (
+                                  <span className="text-[9px] text-gray-400 font-medium block truncate max-w-full mt-0.5" title={`Handle: ${acc.accountHandle}`}>
+                                    @{acc.accountHandle}
                                   </span>
                                 )}
                               </div>
@@ -1059,7 +1087,7 @@ export default function PublishSection() {
                                     rel="noopener noreferrer"
                                     className="text-[10px] font-extrabold text-black hover:underline inline-flex items-center gap-0.5"
                                   >
-                                    View on YouTube
+                                    View on {upload.platform.charAt(0).toUpperCase() + upload.platform.slice(1)}
                                   </a>
                                   <button
                                     onClick={() => {
@@ -1104,6 +1132,7 @@ export default function PublishSection() {
             {[
               { id: 'all', label: 'All' },
               { id: 'published', label: 'Published' },
+              { id: 'scheduled', label: 'Scheduled' },
               { id: 'pending', label: 'Pending' },
               { id: 'failed', label: 'Failed' }
             ].map((tab) => {
@@ -1111,7 +1140,7 @@ export default function PublishSection() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setHistoryTab(tab.id as 'all' | 'published' | 'pending' | 'failed')}
+                  onClick={() => setHistoryTab(tab.id as 'all' | 'published' | 'scheduled' | 'pending' | 'failed')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-white text-black shadow-xs font-extrabold'

@@ -264,6 +264,8 @@ model SocialAccount {
   isDefault       Boolean   @default(false)
   channelId       String?
   subscriberCount String?
+  zernioAccountId String?
+  accountHandle   String?
   connectedAt     DateTime  @default(now())
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -282,6 +284,9 @@ model PublishedVideo {
   videoUrl        String?  @db.Text // link to watch on platform
   title           String
   status          String   // "Preparing Upload", "Uploading", "Processing", "Published", "Failed"
+  postId          String?
+  postUrl         String?  @db.Text
+  errorMessage    String?  @db.Text
   publishedAt     DateTime?
   createdAt       DateTime @default(now())
 
