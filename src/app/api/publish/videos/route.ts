@@ -20,6 +20,7 @@ export async function GET() {
         id: true,
         projectId: true,
         platform: true,
+        socialAccountId: true,
         title: true,
         status: true,
         externalVideoId: true,

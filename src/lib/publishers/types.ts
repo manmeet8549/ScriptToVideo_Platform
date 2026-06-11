@@ -1,9 +1,13 @@
 export interface PublishOptions {
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   tags?: string[];
   visibility?: 'public' | 'unlisted' | 'private';
   publishAt?: Date; // Optional scheduling
+
+  // Platform specific fields
+  caption?: string;    // Facebook, Instagram, LinkedIn
+  tweetText?: string;  // X/Twitter
 }
 
 export interface PublishResult {

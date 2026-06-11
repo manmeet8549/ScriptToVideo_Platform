@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         platform: true,
+        socialAccountId: true,
         status: true,
         externalVideoId: true,
         videoUrl: true,

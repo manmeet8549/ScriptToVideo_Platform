@@ -38,11 +38,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (!nvidiaKey) {
-      console.log('[GENERATE_METADATA] NVIDIA key not configured. Returning simulated mock metadata.');
+      console.log('[GENERATE_METADATA] NVIDIA key not configured. Returning simulated mock multi-platform metadata.');
+      const tags = ['AI', 'Video Generation', 'Automation', 'Social Media', project.name || 'AI Content'].filter(Boolean);
       return NextResponse.json({
-        title: `How to Master ${project.name || 'AI Content Creation'}`,
-        description: `Looking to learn about ${project.name || 'AI content creation'}? \n\nThis video covers the core script:\n${project.scriptText || 'No script text generated yet.'}\n\nSubscribe for more AI tutorials and workflows!`,
-        tags: ['AI', 'Video Generation', 'Automation', 'Social Media', project.name || 'AI Content'].filter(Boolean),
+        youtube: {
+          title: `How to Master ${project.name || 'AI Content Creation'}`,
+          description: `Looking to learn about ${project.name || 'AI content creation'}? \n\nThis video covers the core script:\n${project.scriptText || 'No script text generated yet.'}\n\nSubscribe for more AI tutorials and workflows!`,
+          tags,
+        },
+        linkedin: {
+          postText: `🚀 Excited to share our latest video on ${project.name || 'AI Content Creation'}!\n\nHere is a sneak peek into the script:\n"${project.scriptText ? project.scriptText.substring(0, 150) + '...' : 'Innovative AI workflows'}"\n\nHow are you using AI in your pipeline? Let's discuss in the comments below! 👇\n\n#AI #Automation #Innovation`,
+        },
+        facebook: {
+          caption: `Transforming ideas into reality with Studio AI. Check out this overview of ${project.name || 'our latest project'}. Let us know your thoughts! 🎬✨ #AI #VideoCreator`,
+        },
+        instagram: {
+          caption: `Creating high-quality videos in seconds. 🎥 Here's the roadmap for ${project.name || 'our next launch'}.`,
+          hashtags: ['AI', 'VideoEditing', 'Shorts', 'Reels', 'Tech', 'Creativity'],
+        },
+        twitter: {
+          tweetText: `Tired of manual video editing? 🤖 Check out how we automate scripts and voices for ${project.name || 'Studio AI'}. Watch here:`,
+        }
       });
     }
 
@@ -58,14 +74,14 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: 'You are an AI assistant helping a creator publish their video. Given the video script, generate a YouTube-optimized Title, Description, and Tags. Output the result ONLY as a valid JSON object with keys: title, description, tags (as an array of strings). Do not write any markdown wrappers, backticks, or introductory conversational text.',
+            content: 'You are an AI assistant helping a creator publish their video. Given the video script, generate optimized metadata for YouTube, LinkedIn, Facebook, Instagram, and Twitter. Output the result ONLY as a valid JSON object matching the following structure: { youtube: { title, description, tags: ["tag1", "tag2"] }, linkedin: { postText }, facebook: { caption }, instagram: { caption, hashtags: ["tag1", "tag2"] }, twitter: { tweetText } }. Do not write any markdown wrappers, backticks, or introductory conversational text.',
           },
           {
             role: 'user',
             content: `Video Script:\n${project.scriptText || 'Write a video about ' + project.name}`,
           },
         ],
-        max_tokens: 512,
+        max_tokens: 1024,
         temperature: 0.7,
       }),
     });
@@ -81,20 +97,30 @@ export async function POST(request: NextRequest) {
     try {
       const cleanJsonText = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
       const parsed = JSON.parse(cleanJsonText);
-      return NextResponse.json({
-        title: parsed.title || `Mastering ${project.name}`,
-        description: parsed.description || `Script summary:\n\n${project.scriptText}`,
-        tags: parsed.tags || ['AI', 'Automation'],
-      });
+      return NextResponse.json(parsed);
     } catch (parseErr) {
       console.error('[GENERATE_METADATA] JSON parsing failed. raw text:', text, parseErr);
-      // Fallback regex parsers
-      const titleMatch = text.match(/"title"\s*:\s*"(.*?)"/);
-      const descMatch = text.match(/"description"\s*:\s*"(.*?)"/);
+      
+      // Basic fallback structure if parsing fails
       return NextResponse.json({
-        title: titleMatch?.[1] || `How to master ${project.name}`,
-        description: descMatch?.[1] || `Check out this video script:\n\n${project.scriptText}`,
-        tags: ['AI', 'Automation', project.name],
+        youtube: {
+          title: `How to Master ${project.name}`,
+          description: `Script summary:\n\n${project.scriptText}`,
+          tags: ['AI', 'Automation'],
+        },
+        linkedin: {
+          postText: `Check out our new video about ${project.name}!\n\n#AI #Automation`,
+        },
+        facebook: {
+          caption: `Creating videos with AI. Project: ${project.name}`,
+        },
+        instagram: {
+          caption: `Publishing new Reels for ${project.name}`,
+          hashtags: ['AI', 'Reels'],
+        },
+        twitter: {
+          tweetText: `Check out our new AI-generated video for ${project.name}`,
+        }
       });
     }
   } catch (error) {

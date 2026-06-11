@@ -12,6 +12,7 @@ export async function GET() {
     const accounts = await db.socialAccount.findMany({
       where: { userId: session.user.id },
       select: {
+        id: true,
         platform: true,
         email: true,
         channelName: true,

@@ -3,12 +3,17 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { platform: string } }
+) {
   const session = await auth();
   if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  const { platform } = params;
+  const platformLower = platform.toLowerCase();
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
@@ -16,24 +21,23 @@ export async function GET(request: NextRequest) {
   const appOrigin = request.nextUrl.origin;
 
   if (error || !code) {
-    console.error('[YOUTUBE_CALLBACK] OAuth redirect returned error:', error);
+    console.error(`[AUTH_${platform.toUpperCase()}_CALLBACK] OAuth redirect returned error:`, error);
     return NextResponse.redirect(`${appOrigin}/?tab=publish&error=${encodeURIComponent(error || 'Missing authorization code')}`);
   }
 
-  const client_id = process.env.GOOGLE_CLIENT_ID;
-  const client_secret = process.env.GOOGLE_CLIENT_SECRET;
-
-  const isMockMode = !client_id || !client_secret || code.startsWith('mock-') || process.env.MOCK_PUBLISH === 'true';
-
   try {
-    let email = session.user.email || 'developer@thinknext.com';
-    let channelName = 'ThinkNEXT Studio Channel';
-    let accessToken = 'mock-access-token-987654321';
-    let refreshToken = 'mock-refresh-token-123456789';
+    let email = session.user.email || 'creator@thinknext.com';
+    let channelName = `${platform.charAt(0).toUpperCase() + platform.slice(1)} Channel`;
+    let accessToken = `mock-${platformLower}-access-token`;
+    let refreshToken: string | null = `mock-${platformLower}-refresh-token`;
     let expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
 
-    if (!isMockMode) {
-      // 1. Exchange authorization code for tokens
+    const client_id = platformLower === 'youtube' ? process.env.GOOGLE_CLIENT_ID : null;
+    const client_secret = platformLower === 'youtube' ? process.env.GOOGLE_CLIENT_SECRET : null;
+    const isMockMode = !client_id || !client_secret || code.startsWith('mock-') || process.env.MOCK_PUBLISH === 'true';
+
+    if (platformLower === 'youtube' && !isMockMode) {
+      // Real YouTube token exchange and details retrieval
       const redirect_uri = `${appOrigin}/api/auth/youtube/callback`;
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest) {
       refreshToken = tokenData.refresh_token || null;
       expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000);
 
-      // 2. Fetch User Profile Email
+      // Fetch user profile email
       const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { 'Authorization': `Bearer ${accessToken}` },
       });
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest) {
         email = profile.email || email;
       }
 
-      // 3. Fetch YouTube Channel Name
+      // Fetch YouTube channel name
       const channelRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
         headers: { 'Authorization': `Bearer ${accessToken}` },
       });
@@ -79,45 +83,55 @@ export async function GET(request: NextRequest) {
           channelName = firstChannel.snippet?.title || channelName;
         }
       }
+    } else {
+      // Mock Mode Account Generation (Randomizes details so users can add multiple accounts)
+      const randomSuffix = Math.random().toString(36).substring(7).toUpperCase();
+      email = `${platformLower}-${randomSuffix.toLowerCase()}@thinknext.com`;
+      channelName = `${platform.charAt(0).toUpperCase() + platform.slice(1)} Channel ${randomSuffix}`;
     }
 
-    // Encrypt the tokens before storing in the database
     const encryptedAccessToken = encrypt(accessToken);
     const encryptedRefreshToken = refreshToken ? encrypt(refreshToken) : null;
 
-    // 4. Save account to DB
-    console.log(`[YOUTUBE_CALLBACK] Saving SocialAccount for user ${session.user.id} (${email}, Channel: ${channelName})`);
-    
-    // Check if a social account already exists for this user/platform
-    await db.socialAccount.upsert({
+    console.log(`[AUTH_${platform.toUpperCase()}_CALLBACK] Connecting SocialAccount for user ${session.user.id} (${email}, Channel: ${channelName})`);
+
+    // Match by userId, platform, and channelName programmatically to support multiple connected accounts
+    const existing = await db.socialAccount.findFirst({
       where: {
-        userId_platform: {
-          userId: session.user.id,
-          platform: 'youtube',
-        },
-      },
-      update: {
-        email,
-        channelName,
-        accessToken: encryptedAccessToken,
-        refreshToken: encryptedRefreshToken || undefined, // don't wipe existing refresh token if not returned
-        tokenExpiry: expiresAt,
-        connectedAt: new Date(),
-      },
-      create: {
         userId: session.user.id,
-        platform: 'youtube',
-        email,
+        platform: platformLower,
         channelName,
-        accessToken: encryptedAccessToken,
-        refreshToken: encryptedRefreshToken,
-        tokenExpiry: expiresAt,
       },
     });
 
-    return NextResponse.redirect(`${appOrigin}/?tab=publish&connected=youtube`);
+    if (existing) {
+      await db.socialAccount.update({
+        where: { id: existing.id },
+        data: {
+          email,
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken || undefined,
+          tokenExpiry: expiresAt,
+          connectedAt: new Date(),
+        },
+      });
+    } else {
+      await db.socialAccount.create({
+        data: {
+          userId: session.user.id,
+          platform: platformLower,
+          email,
+          channelName,
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          tokenExpiry: expiresAt,
+        },
+      });
+    }
+
+    return NextResponse.redirect(`${appOrigin}/?tab=publish&connected=${platformLower}`);
   } catch (err) {
-    console.error('[YOUTUBE_CALLBACK] Error handling OAuth callback:', err);
+    console.error(`[AUTH_${platform.toUpperCase()}_CALLBACK] Error handling OAuth callback:`, err);
     return NextResponse.redirect(`${appOrigin}/?tab=publish&error=${encodeURIComponent(err instanceof Error ? err.message : 'Callback failed')}`);
   }
 }
