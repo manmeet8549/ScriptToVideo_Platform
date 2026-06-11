@@ -6,7 +6,7 @@ import { persist } from 'zustand/middleware';
 
 interface AppState {
   // ─── UI State ──────────────────────────────────────────────────────────────
-  activeTab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline' | 'video-library';
+  activeTab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline' | 'video-library' | 'publish';
   selectedProjectId: string | null;
   activeStepIndex: number | null;
   searchQuery: string;
@@ -24,7 +24,7 @@ interface AppState {
   authView: 'login' | 'signup' | null;
 
   // ─── Actions ───────────────────────────────────────────────────────────────
-  setActiveTab: (tab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline' | 'video-library') => void;
+  setActiveTab: (tab: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline' | 'video-library' | 'publish') => void;
   setSelectedProjectId: (id: string | null) => void;
   setActiveStepIndex: (step: number | null) => void;
   openProject: (id: string) => void;

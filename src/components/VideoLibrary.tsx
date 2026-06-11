@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Play, Download, Link2, Trash2, Search, ArrowUpDown, 
-  Video, Calendar, HardDrive, Check, X, Loader2
+  Video, Calendar, HardDrive, Check, X, Loader2, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAppStore } from '@/store/store';
 
 interface VideoItem {
   id: string;
@@ -24,6 +25,18 @@ interface VideoItem {
     name: string;
     videoRatio?: 'RATIO_16_9' | 'RATIO_9_16' | 'RATIO_1_1' | null;
   };
+}
+
+interface PublishedVideoItem {
+  id: string;
+  projectId: string;
+  platform: string;
+  title: string;
+  status: string;
+  externalVideoId: string | null;
+  videoUrl: string | null;
+  publishedAt: string | null;
+  createdAt: string;
 }
 
 function formatBytes(bytes: number | null): string {
@@ -50,6 +63,8 @@ function VideoCard({
   handleDelete,
   copiedId,
   isDeletePending,
+  pubVideo,
+  handlePublish,
 }: {
   video: VideoItem;
   setActiveWatchVideo: (video: VideoItem) => void;
@@ -58,6 +73,8 @@ function VideoCard({
   handleDelete: (id: string) => void;
   copiedId: string | null;
   isDeletePending: boolean;
+  pubVideo?: PublishedVideoItem | null;
+  handlePublish: (video: VideoItem) => void;
 }) {
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -183,6 +200,57 @@ function VideoCard({
           </div>
         </div>
 
+        {/* Publish Action Button */}
+        <div className="pt-2">
+          {!pubVideo ? (
+            <button
+              onClick={() => handlePublish(video)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-2xl bg-black text-white hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Publish to YouTube
+            </button>
+          ) : pubVideo.status === 'Published' ? (
+            <div className="flex gap-2 w-full">
+              <a
+                href={pubVideo.videoUrl || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-grow flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100/50 transition-colors"
+              >
+                <Play className="h-3.5 w-3.5 fill-emerald-700 text-emerald-700" />
+                View on YouTube
+              </a>
+              <button
+                onClick={() => handlePublish(video)}
+                className="flex items-center justify-center p-2.5 text-xs font-bold rounded-2xl border border-gray-200 text-gray-600 hover:text-black hover:bg-gray-50 transition-colors cursor-pointer"
+                title="Republish Video"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : pubVideo.status.startsWith('Failed') ? (
+            <div className="flex gap-2 w-full">
+              <button
+                onClick={() => handlePublish(video)}
+                className="flex-grow flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-2xl bg-red-50 text-red-700 border border-red-100 hover:bg-red-100/50 transition-colors cursor-pointer"
+                title={pubVideo.status}
+              >
+                <X className="h-3.5 w-3.5" />
+                Failed (Retry)
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handlePublish(video)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-2xl bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100/50 transition-colors cursor-pointer"
+            >
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+              Publishing...
+            </button>
+          )}
+        </div>
+
         {/* Card Actions bar */}
         <div className="grid grid-cols-3 gap-2 pt-3">
           <button
@@ -228,11 +296,35 @@ function VideoCard({
 }
 
 export default function VideoLibrary() {
+  const { setActiveTab } = useAppStore();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [activeWatchVideo, setActiveWatchVideo] = useState<VideoItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Fetch published videos to check status
+  const { data: publishedData } = useQuery<{ publishedVideos: PublishedVideoItem[] }>({
+    queryKey: ['publishedVideos'],
+    queryFn: async () => {
+      const res = await fetch('/api/publish/videos');
+      if (!res.ok) throw new Error('Failed to fetch published videos');
+      return res.json();
+    },
+    refetchInterval: 5000, // poll history every 5s to sync progress HUDs
+  });
+
+  const publishedVideos = publishedData?.publishedVideos ?? [];
+
+  const handlePublish = (video: VideoItem) => {
+    setActiveTab('publish');
+    const newUrl = `${window.location.pathname}?tab=publish&video=${video.id}`;
+    window.history.pushState(
+      { activeTab: 'publish', selectedProjectId: video.projectId },
+      '',
+      newUrl
+    );
+  };
 
   // Fetch videos
   const { data, isLoading, error } = useQuery<{ videos: VideoItem[] }>({
@@ -383,6 +475,8 @@ export default function VideoLibrary() {
               handleDelete={handleDelete}
               copiedId={copiedId}
               isDeletePending={deleteMutation.isPending}
+              pubVideo={publishedVideos.find((pv) => pv.projectId === video.projectId)}
+              handlePublish={handlePublish}
             />
           </motion.div>
         ))}

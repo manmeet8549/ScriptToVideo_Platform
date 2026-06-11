@@ -13,6 +13,7 @@ import ProjectPipeline from '@/components/ProjectPipeline';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import AuthScreen from '@/components/AuthScreen';
 import VideoLibrary from '@/components/VideoLibrary';
+import PublishSection from '@/components/PublishSection';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
 
 import { useAppStore } from '@/store/store';
@@ -22,7 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { 
   LayoutDashboard, FolderClosed, Copy, KeyRound, Settings, 
-  LogOut, Plus, ArrowRight, Video, FileText, Volume2
+  LogOut, Plus, ArrowRight, Video, FileText, Volume2, Share2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -56,7 +57,7 @@ export default function Home() {
     isUrlUpdatingStateRef.current = true;
 
     // Default or parsed tab
-    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library'] as const;
+    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish'] as const;
     type TabType = typeof validTabs[number];
     if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
       setActiveTab(tabParam as TabType);
@@ -157,7 +158,7 @@ export default function Home() {
         const stepParam = params.get('step') ? parseInt(params.get('step') || '') : null;
         const authParam = params.get('auth');
 
-        const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline'] as const;
+        const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish'] as const;
         type TabType = typeof validTabs[number];
         if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
           setActiveTab(tabParam as TabType);
@@ -269,9 +270,10 @@ export default function Home() {
       { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
       { id: 'projects' as const, label: 'Projects', icon: FolderClosed },
       { id: 'templates' as const, label: 'Templates', icon: Copy },
+      { id: 'video-library' as const, label: 'Video Library', icon: Video },
+      { id: 'publish' as const, label: 'Publish', icon: Share2 },
       { id: 'api-keys' as const, label: 'API Keys', icon: KeyRound },
       { id: 'settings' as const, label: 'Settings', icon: Settings },
-      { id: 'video-library' as const, label: 'Video Library', icon: Video },
     ];
 
     const userInitials = user.name
@@ -809,6 +811,18 @@ export default function Home() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 <VideoLibrary />
+              </motion.div>
+            )}
+
+            {/* 7. Publish Tab */}
+            {activeTab === 'publish' && (
+              <motion.div
+                key="publish"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <PublishSection />
               </motion.div>
             )}
           </AnimatePresence>
