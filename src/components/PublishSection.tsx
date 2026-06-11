@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
   Sparkles, Loader2, Play,
   CheckCircle2, AlertCircle,
-  Video, UploadCloud, ChevronRight, Info, Trash2, Plus
+  Video, UploadCloud, ChevronRight, Info, Trash2, Plus, Edit2, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -66,6 +66,7 @@ interface SocialAccount {
   email: string | null;
   channelName: string | null;
   connectedAt: string;
+  isDefault: boolean;
 }
 
 interface PublishedVideo {
@@ -163,8 +164,12 @@ export default function PublishSection() {
       const updates: Record<string, string> = {};
       ['youtube', 'linkedin', 'facebook', 'instagram', 'twitter'].forEach((p) => {
         const platformAccounts = accounts.filter((a) => a.platform === p);
-        if (platformAccounts.length > 0 && !prev[p]) {
-          updates[p] = platformAccounts[0].id;
+        if (platformAccounts.length > 0) {
+          const defaultAcc = platformAccounts.find((a) => a.isDefault) || platformAccounts[0];
+          const currentSelectedIsConnected = platformAccounts.some((a) => a.id === prev[p]);
+          if (!prev[p] || !currentSelectedIsConnected) {
+            updates[p] = defaultAcc.id;
+          }
         }
       });
       if (Object.keys(updates).length > 0) {
@@ -219,6 +224,46 @@ export default function PublishSection() {
       queryClient.invalidateQueries({ queryKey: ['publishAccounts'] });
     },
   });
+
+  // Account settings mutation (rename/setDefault)
+  const accountSettingsMutation = useMutation({
+    mutationFn: async (payload: { accountId: string; action: 'rename' | 'setDefault'; channelName?: string }) => {
+      const res = await fetch('/api/publish/accounts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update account settings');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchAccounts();
+    },
+    onError: (err) => {
+      alert(err.message);
+    }
+  });
+
+  const handleRenameAccount = (accountId: string, currentName: string) => {
+    const newName = prompt(`Rename account "${currentName}" to:`, currentName);
+    if (newName && newName.trim() && newName.trim() !== currentName) {
+      accountSettingsMutation.mutate({
+        accountId,
+        action: 'rename',
+        channelName: newName.trim(),
+      });
+    }
+  };
+
+  const handleSetDefaultAccount = (accountId: string) => {
+    accountSettingsMutation.mutate({
+      accountId,
+      action: 'setDefault',
+    });
+  };
 
   const handleDisconnect = (accountId: string, channelName: string) => {
     if (confirm(`Disconnect account: "${channelName}"? You will need to re-authenticate to publish to it.`)) {
@@ -525,20 +570,46 @@ export default function PublishSection() {
                   {/* Connected Accounts List */}
                   <div className="flex-1 overflow-y-auto max-h-20 space-y-1.5 pr-1 scrollbar-thin">
                     {platformAccounts.length > 0 ? (
-                      platformAccounts.map((acc) => (
-                        <div key={acc.id} className="flex justify-between items-center bg-neutral-50 border border-gray-100 p-2 rounded-xl text-xs font-semibold text-gray-700">
-                          <span className="truncate max-w-[80%]" title={acc.channelName || acc.email || 'Account'}>
-                            {acc.channelName || acc.email}
-                          </span>
-                          <button
-                            onClick={() => handleDisconnect(acc.id, acc.channelName || 'Account')}
-                            className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                            title="Disconnect Account"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))
+                      platformAccounts
+                        .sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
+                        .map((acc) => {
+                          const isDefault = acc.isDefault;
+                          return (
+                            <div key={acc.id} className={`flex justify-between items-center p-2 rounded-xl text-xs font-semibold ${isDefault ? 'bg-indigo-50 border border-indigo-100 text-indigo-950 shadow-2xs' : 'bg-neutral-50 border border-gray-100 text-gray-700'}`}>
+                              <div className="flex items-center gap-1.5 truncate max-w-[65%]">
+                                {isDefault && <Star className="h-3 w-3 fill-indigo-500 text-indigo-500 shrink-0" />}
+                                <span className="truncate" title={acc.channelName || acc.email || 'Account'}>
+                                  {acc.channelName || acc.email}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => handleRenameAccount(acc.id, acc.channelName || '')}
+                                  className="text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                                  title="Rename Account"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </button>
+                                {!isDefault && (
+                                  <button
+                                    onClick={() => handleSetDefaultAccount(acc.id)}
+                                    className="text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                                    title="Set as Default"
+                                  >
+                                    <Star className="h-3 w-3" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDisconnect(acc.id, acc.channelName || 'Account')}
+                                  className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                                  title="Disconnect Account"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
                     ) : (
                       <div className="text-center py-4 text-[10px] text-gray-400 font-semibold border border-dashed border-gray-150 rounded-xl bg-gray-50/20">
                         No accounts connected

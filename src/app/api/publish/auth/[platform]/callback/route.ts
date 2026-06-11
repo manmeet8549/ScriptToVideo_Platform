@@ -84,10 +84,22 @@ export async function GET(
         }
       }
     } else {
-      // Mock Mode Account Generation (Randomizes details so users can add multiple accounts)
-      const randomSuffix = Math.random().toString(36).substring(7).toUpperCase();
-      email = `${platformLower}-${randomSuffix.toLowerCase()}@thinknext.com`;
-      channelName = `${platform.charAt(0).toUpperCase() + platform.slice(1)} Channel ${randomSuffix}`;
+      // Mock Mode Account Connection (reads custom query params from mock consent page first)
+      const queryName = searchParams.get('channelName');
+      const queryEmail = searchParams.get('email');
+      
+      if (queryName && queryName !== 'custom') {
+        channelName = queryName;
+      } else {
+        const randomSuffix = Math.random().toString(36).substring(7).toUpperCase();
+        channelName = `${platform.charAt(0).toUpperCase() + platform.slice(1)} Channel ${randomSuffix}`;
+      }
+      
+      if (queryEmail) {
+        email = queryEmail;
+      } else {
+        email = `${platformLower}-creator@thinknext.com`;
+      }
     }
 
     const encryptedAccessToken = encrypt(accessToken);
@@ -116,6 +128,15 @@ export async function GET(
         },
       });
     } else {
+      // Check if this is the first account for this platform to set as default
+      const siblingCount = await db.socialAccount.count({
+        where: {
+          userId: session.user.id,
+          platform: platformLower,
+        },
+      });
+      const isDefault = siblingCount === 0;
+
       await db.socialAccount.create({
         data: {
           userId: session.user.id,
@@ -125,6 +146,7 @@ export async function GET(
           accessToken: encryptedAccessToken,
           refreshToken: encryptedRefreshToken,
           tokenExpiry: expiresAt,
+          isDefault,
         },
       });
     }
