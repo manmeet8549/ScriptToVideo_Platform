@@ -228,7 +228,7 @@ export default function PublishSection() {
 
   const handleConnect = (platform: string) => {
     // Redirects to dynamic OAuth path
-    window.location.href = `/api/auth/${platform}`;
+    window.location.href = `/api/publish/auth/${platform}`;
   };
 
   const togglePlatform = (platform: string) => {

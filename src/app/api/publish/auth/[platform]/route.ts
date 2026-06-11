@@ -23,7 +23,7 @@ export async function GET(
 
     if (!isMockMode) {
       const host = process.env.NEXTAUTH_URL || request.nextUrl.origin;
-      const redirect_uri = `${host}/api/auth/youtube/callback`;
+      const redirect_uri = `${host}/api/publish/auth/youtube/callback`;
       const scope = [
         'https://www.googleapis.com/auth/youtube.upload',
         'https://www.googleapis.com/auth/userinfo.email',
@@ -45,7 +45,7 @@ export async function GET(
 
   // Fallback Mock Mode connection for all other platforms (and YouTube if developer keys are omitted)
   console.log(`[AUTH_${platform.toUpperCase()}] Running in MOCK OAuth Mode.`);
-  const callbackUrl = new URL(`/api/auth/${platformLower}/callback`, request.nextUrl.origin);
+  const callbackUrl = new URL(`/api/publish/auth/${platformLower}/callback`, request.nextUrl.origin);
   callbackUrl.searchParams.set('code', `mock-${platformLower}-code-123456`);
   return NextResponse.redirect(callbackUrl.toString());
 }

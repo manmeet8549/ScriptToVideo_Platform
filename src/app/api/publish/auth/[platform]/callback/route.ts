@@ -38,7 +38,7 @@ export async function GET(
 
     if (platformLower === 'youtube' && !isMockMode) {
       // Real YouTube token exchange and details retrieval
-      const redirect_uri = `${appOrigin}/api/auth/youtube/callback`;
+      const redirect_uri = `${appOrigin}/api/publish/auth/youtube/callback`;
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
