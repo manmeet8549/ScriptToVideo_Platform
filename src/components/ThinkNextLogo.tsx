@@ -12,10 +12,10 @@ export default function ThinkNextLogo({
 }: ThinkNextLogoProps) {
   // Height classes for dynamic scaling
   const heightClasses = {
-    xs: 'h-6',
-    sm: 'h-9',
-    md: 'h-12',
-    lg: 'h-18',
+    xs: 'h-8',
+    sm: 'h-14',
+    md: 'h-20',
+    lg: 'h-28',
   };
 
   const heightClass = heightClasses[size] || 'h-12';
