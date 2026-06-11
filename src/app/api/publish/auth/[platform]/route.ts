@@ -48,44 +48,38 @@ export async function GET(
 
   // Custom icon markup & branding based on platform
   let iconSVG = '';
-  let platformColorClass = '';
   let presetOptions = '';
 
   if (platformLower === 'youtube') {
-    iconSVG = `<svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.522 3.5 12 3.5 12 3.5s-7.522 0-9.388.555A3.002 3.002 0 0 0 .503 6.163C0 8.03 0 12 0 12s0 3.97.503 5.837a3.003 3.003 0 0 0 2.11 2.108C5.113 20.5 12 20.5 12 20.5s7.522 0 9.388-.555a3.003 3.003 0 0 0 2.11-2.108C24 15.97 24 12 24 12s0-3.97-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
-    platformColorClass = 'youtube';
+    iconSVG = `<svg viewBox="0 0 24 24" width="36" height="36" fill="#FF0000"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.522 3.5 12 3.5 12 3.5s-7.522 0-9.388.555A3.002 3.002 0 0 0 .503 6.163C0 8.03 0 12 0 12s0 3.97.503 5.837a3.003 3.003 0 0 0 2.11 2.108C5.113 20.5 12 20.5 12 20.5s7.522 0 9.388-.555a3.003 3.003 0 0 0 2.11-2.108C24 15.97 24 12 24 12s0-3.97-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
     presetOptions = `
       <option value="ThinkNEXT Studio">ThinkNEXT Studio (Corporate)</option>
       <option value="Personal Channel">Personal Channel (Creator)</option>
       <option value="Client Channel">Client Channel (Marketing)</option>
     `;
   } else if (platformLower === 'linkedin') {
-    iconSVG = `<svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`;
-    platformColorClass = 'linkedin';
+    iconSVG = `<svg viewBox="0 0 24 24" width="36" height="36" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>`;
     presetOptions = `
       <option value="Personal Profile">Personal Profile (Professional)</option>
       <option value="Company Page">Company Page (ThinkNEXT)</option>
       <option value="Client Company Profile">Client Page (Consulting)</option>
     `;
   } else if (platformLower === 'facebook') {
-    iconSVG = `<svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
-    platformColorClass = 'facebook';
+    iconSVG = `<svg viewBox="0 0 24 24" width="36" height="36" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
     presetOptions = `
       <option value="ThinkNEXT Page">ThinkNEXT Page</option>
       <option value="Client Business Page">Client Business Page</option>
       <option value="Personal Creator Page">Personal Creator Page</option>
     `;
   } else if (platformLower === 'instagram') {
-    iconSVG = `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>`;
-    platformColorClass = 'instagram';
+    iconSVG = `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#E1306C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>`;
     presetOptions = `
       <option value="ThinkNEXT Business Account">ThinkNEXT Business Account</option>
       <option value="Client Brand Profile">Client Brand Profile</option>
       <option value="Personal Creator Account">Personal Creator Account</option>
     `;
   } else {
-    iconSVG = `<svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
-    platformColorClass = 'twitter';
+    iconSVG = `<svg viewBox="0 0 24 24" width="36" height="36" fill="#000000"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
     presetOptions = `
       <option value="ThinkNEXT Official">ThinkNEXT Official Account</option>
       <option value="Personal Handle">Personal Handle</option>
@@ -103,12 +97,12 @@ export async function GET(
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #6366f1;
-      --bg: #090d16;
-      --card-bg: rgba(17, 24, 39, 0.7);
-      --border: rgba(255, 255, 255, 0.08);
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent-input: #cbd5e1;
     }
     
     * {
@@ -125,64 +119,52 @@ export async function GET(
       display: flex;
       align-items: center;
       justify-content: center;
-      background-image: 
-        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.05) 0%, transparent 40%);
-      padding: 20px;
+      padding: 24px;
     }
     
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 35px;
+      border-radius: 20px;
+      padding: 40px;
       width: 100%;
-      max-width: 460px;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-      animation: fadeIn 0.4s ease-out;
+      max-width: 440px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+      animation: scaleIn 0.3s ease-out;
     }
     
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
     }
     
     .header {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 28px;
     }
     
     .icon-wrapper {
-      width: 60px;
-      height: 60px;
-      border-radius: 16px;
+      width: 54px;
+      height: 54px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 16px;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     }
-    
-    .youtube { background: rgba(255, 0, 0, 0.12); color: #FF0000; border: 1px solid rgba(255, 0, 0, 0.2); }
-    .linkedin { background: rgba(10, 102, 194, 0.12); color: #0A66C2; border: 1px solid rgba(10, 102, 194, 0.2); }
-    .facebook { background: rgba(24, 119, 242, 0.12); color: #1877F2; border: 1px solid rgba(24, 119, 242, 0.2); }
-    .instagram { background: rgba(225, 48, 108, 0.12); color: #E1306C; border: 1px solid rgba(225, 48, 108, 0.2); }
-    .twitter { background: rgba(255, 255, 255, 0.06); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.12); }
     
     .app-title {
       font-size: 20px;
-      font-weight: 800;
-      color: #fff;
+      font-weight: 700;
+      color: var(--text);
       margin-bottom: 6px;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
     
     .app-subtitle {
       font-size: 13px;
       color: var(--text-muted);
       font-weight: 500;
-      line-height: 1.4;
+      line-height: 1.45;
     }
     
     .form-group {
@@ -191,7 +173,7 @@ export async function GET(
     
     label {
       display: block;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -201,11 +183,11 @@ export async function GET(
     
     input, select {
       width: 100%;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      color: #fff;
+      background: #ffffff;
+      border: 1px solid var(--accent-input);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
       font-family: inherit;
       font-size: 13.5px;
       font-weight: 500;
@@ -214,21 +196,16 @@ export async function GET(
     
     input:focus, select:focus {
       outline: none;
-      border-color: var(--primary);
-      background: rgba(255, 255, 255, 0.06);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-    }
-    
-    .custom-input-group {
-      position: relative;
+      border-color: #000000;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
     }
     
     .scopes-container {
-      background: rgba(255, 255, 255, 0.01);
-      border: 1px dashed var(--border);
-      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
       padding: 16px;
-      margin-bottom: 25px;
+      margin-bottom: 28px;
     }
     
     .scope-title {
@@ -245,10 +222,10 @@ export async function GET(
       align-items: flex-start;
       gap: 10px;
       font-size: 12px;
-      color: var(--text-muted);
+      color: #334155;
       font-weight: 500;
       margin-bottom: 8px;
-      line-height: 1.3;
+      line-height: 1.35;
     }
     
     .scope-item:last-child {
@@ -257,8 +234,8 @@ export async function GET(
     
     .scope-item input[type="checkbox"] {
       width: auto;
-      margin-top: 1px;
-      accent-color: var(--primary);
+      margin-top: 2px;
+      accent-color: #000000;
       cursor: pointer;
     }
     
@@ -274,9 +251,9 @@ export async function GET(
       justify-content: center;
       font-family: inherit;
       font-size: 13.5px;
-      font-weight: 700;
+      font-weight: 600;
       padding: 12px 20px;
-      border-radius: 12px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
       transition: all 0.2s;
@@ -285,26 +262,24 @@ export async function GET(
     }
     
     .btn-primary {
-      background: var(--primary);
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      background: #000000;
+      color: #ffffff;
     }
     
     .btn-primary:hover {
-      background: #4f46e5;
+      background: #1e293b;
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
     }
     
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid var(--accent-input);
     }
     
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
+      background: #f8fafc;
+      border-color: #94a3b8;
       transform: translateY(-1px);
     }
   </style>
@@ -313,7 +288,7 @@ export async function GET(
 
   <div class="card">
     <div class="header">
-      <div class="icon-wrapper ${platformColorClass}">
+      <div class="icon-wrapper">
         ${iconSVG}
       </div>
       <h2 class="app-title">Connect ${platformLabel} Account</h2>
@@ -342,7 +317,7 @@ export async function GET(
       </div>
       
       <div class="scopes-container">
-        <div class="scope-title">Requested Permissions</div>
+        <div class="scope-title">Permissions Requested</div>
         <div class="scope-item">
           <input type="checkbox" id="sc1" checked required>
           <label for="sc1" style="display:inline; text-transform:none; font-size:12px; font-weight:500; margin:0; cursor:pointer;">Publish generated videos and shorts</label>
@@ -359,7 +334,7 @@ export async function GET(
       
       <div class="btn-group">
         <a href="/?tab=publish&error=Authentication+cancelled" class="btn btn-secondary">Cancel</a>
-        <button type="submit" class="btn btn-primary">Authorize</button>
+        <button type="submit" class="btn btn-primary">Connect Account</button>
       </div>
     </form>
   </div>
@@ -381,8 +356,6 @@ export async function GET(
     
     function updateCustomValue(inputElement) {
       const selectElement = document.getElementById('channelName');
-      // Set the select element's value to hold the typed value dynamically
-      // To bypass the standard option list limit, we can update the custom option's value
       const customOption = selectElement.options[selectElement.options.length - 1];
       customOption.value = inputElement.value;
     }
