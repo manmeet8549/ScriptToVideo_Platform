@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
@@ -15,6 +16,10 @@ import AuthScreen from '@/components/AuthScreen';
 import VideoLibrary from '@/components/VideoLibrary';
 import PublishSection from '@/components/PublishSection';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
+import EditorsSection from '@/components/EditorsSection';
+import EditorDashboard from '@/components/EditorDashboard';
+import EditorProfileSection from '@/components/EditorProfileSection';
+import AssignmentsSection from '@/components/AssignmentsSection';
 
 import { useAppStore } from '@/store/store';
 import { useProjects } from '@/hooks/useProjects';
@@ -23,7 +28,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { 
   LayoutDashboard, FolderClosed, Copy, KeyRound, Settings, 
-  LogOut, Plus, ArrowRight, Video, FileText, Volume2, Share2
+  LogOut, Plus, ArrowRight, Video, FileText, Volume2, Share2,
+  Shield, Users, User, Coins, Bell
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -38,6 +44,71 @@ export default function Home() {
   const { data: session, status } = useSession();
   const user = session?.user;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Credit and Notifications states
+  const [credits, setCredits] = useState<{
+    scriptCredits: number;
+    voiceCredits: number;
+    videoCredits: number;
+    publishCredits: number;
+    storageLimitGB: number;
+    storageUsedGB: number;
+  } | null>(null);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    title: string;
+    message: string;
+    read: boolean;
+    createdAt: string;
+  }>>([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  const fetchCredits = async () => {
+    try {
+      const res = await fetch('/api/user/credits');
+      const data = await res.json();
+      if (res.ok) setCredits(data.wallet);
+    } catch (err) {
+      console.error('Failed to fetch credits', err);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('/api/notifications');
+      const data = await res.json();
+      if (res.ok) setNotifications(data.notifications || []);
+    } catch (err) {
+      console.error('Failed to fetch notifications', err);
+    }
+  };
+
+  useEffect(() => {
+    if (status === 'authenticated' && user) {
+      fetchCredits();
+      fetchNotifications();
+      
+      // Refresh every 30s to keep in sync
+      const interval = setInterval(() => {
+        fetchCredits();
+        fetchNotifications();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [status, user]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      const res = await fetch('/api/notifications/read', { method: 'POST' });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   // ─── Browser History & URL Syncing ──────────────────────────────────────────
   const isUrlUpdatingStateRef = useRef(false);
@@ -57,7 +128,7 @@ export default function Home() {
     isUrlUpdatingStateRef.current = true;
 
     // Default or parsed tab
-    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish'] as const;
+    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish', 'editors', 'connected-users', 'editor-profile', 'assignments'] as const;
     type TabType = typeof validTabs[number];
     if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
       setActiveTab(tabParam as TabType);
@@ -158,7 +229,7 @@ export default function Home() {
         const stepParam = params.get('step') ? parseInt(params.get('step') || '') : null;
         const authParam = params.get('auth');
 
-        const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish'] as const;
+        const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish', 'editors', 'connected-users', 'editor-profile', 'assignments'] as const;
         type TabType = typeof validTabs[number];
         if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
           setActiveTab(tabParam as TabType);
@@ -182,6 +253,21 @@ export default function Home() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [setActiveTab, setSelectedProjectId, setActiveStepIndex, setAuthView]);
+
+  // Sync tab for user role
+  useEffect(() => {
+    if (status === 'authenticated' && user) {
+      if (user.role === 'EDITOR') {
+        if (activeTab !== 'connected-users' && activeTab !== 'editor-profile' && activeTab !== 'settings') {
+          setActiveTab('connected-users');
+        }
+      } else {
+        if (activeTab === 'connected-users' || activeTab === 'editor-profile') {
+          setActiveTab('dashboard');
+        }
+      }
+    }
+  }, [status, user, activeTab, setActiveTab]);
 
   // Fetch projects for dashboard list
   const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
@@ -266,15 +352,23 @@ export default function Home() {
 
   // ─── AUTHENTICATED SIDEBAR LAYOUT ──────────────────────────────────────────
   if (status === 'authenticated' && user) {
-    const sidebarItems = [
-      { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-      { id: 'projects' as const, label: 'Projects', icon: FolderClosed },
-      { id: 'templates' as const, label: 'Templates', icon: Copy },
-      { id: 'video-library' as const, label: 'Video Library', icon: Video },
-      { id: 'publish' as const, label: 'Publish', icon: Share2 },
-      { id: 'api-keys' as const, label: 'API Keys', icon: KeyRound },
-      { id: 'settings' as const, label: 'Settings', icon: Settings },
-    ];
+    const sidebarItems = user.role === 'EDITOR'
+      ? [
+          { id: 'connected-users' as const, label: 'Connected Users', icon: Users },
+          { id: 'editor-profile' as const, label: 'My Profile', icon: User },
+          { id: 'settings' as const, label: 'Settings', icon: Settings },
+        ]
+      : [
+          { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'projects' as const, label: 'Projects', icon: FolderClosed },
+          { id: 'templates' as const, label: 'Templates', icon: Copy },
+          { id: 'video-library' as const, label: 'Video Library', icon: Video },
+          { id: 'assignments' as const, label: 'Assignments', icon: FileText },
+          { id: 'publish' as const, label: 'Publish', icon: Share2 },
+          { id: 'api-keys' as const, label: 'API Keys', icon: KeyRound },
+          { id: 'editors' as const, label: 'Editors', icon: Users },
+          { id: 'settings' as const, label: 'Settings', icon: Settings },
+        ];
 
     const userInitials = user.name
       ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
@@ -316,7 +410,55 @@ export default function Home() {
                   </button>
                 );
               })}
+              {user.role === 'ADMIN' && (
+                <Link
+                  href="/admin/users"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 text-left text-gray-500 hover:text-black hover:bg-neutral-50"
+                >
+                  <Shield className="h-4.5 w-4.5 text-gray-400" />
+                  Admin Panel
+                </Link>
+              )}
             </nav>
+
+            {user.role === 'USER' && (
+              <div className="p-4 bg-neutral-50 border border-neutral-100 rounded-2xl space-y-3 mt-6">
+                <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  <span>My Credits</span>
+                  <Coins className="h-3.5 w-3.5 text-black" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                  <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
+                    <span className="text-gray-400">Scripts</span>
+                    <span className="text-sm font-black text-black">{credits?.scriptCredits ?? 0}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
+                    <span className="text-gray-400">Voices</span>
+                    <span className="text-sm font-black text-black">{credits?.voiceCredits ?? 0}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
+                    <span className="text-gray-400">Videos</span>
+                    <span className="text-sm font-black text-black">{credits?.videoCredits ?? 0}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
+                    <span className="text-gray-400">Publish</span>
+                    <span className="text-sm font-black text-black">{credits?.publishCredits ?? 0}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-neutral-100 space-y-1">
+                  <div className="flex justify-between text-[9px] text-gray-400 font-bold">
+                    <span>Storage Used</span>
+                    <span>{credits?.storageUsedGB?.toFixed(2) ?? '0.00'} / {credits?.storageLimitGB ?? 10} GB</span>
+                  </div>
+                  <div className="bg-gray-200 h-1 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-black h-full rounded-full transition-all duration-350" 
+                      style={{ width: `${Math.min(100, Math.round(((credits?.storageUsedGB ?? 0) / (credits?.storageLimitGB ?? 10)) * 100))}%` }} 
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* User Account / Profile */}
@@ -409,6 +551,16 @@ export default function Home() {
                         </button>
                       );
                     })}
+                    {user.role === 'ADMIN' && (
+                      <Link
+                        href="/admin/users"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 text-left text-gray-500 hover:text-black hover:bg-neutral-50"
+                      >
+                        <Shield className="h-4.5 w-4.5 text-gray-400" />
+                        Admin Panel
+                      </Link>
+                    )}
                   </nav>
                 </div>
 
@@ -476,7 +628,75 @@ export default function Home() {
 
           {/* Right Main Panel */}
           <main className="flex-grow p-4 sm:p-6 lg:p-10 flex flex-col justify-between overflow-x-hidden">
-          <AnimatePresence mode="wait">
+            {/* Top Bar with Notifications and Title */}
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                {activeTab === 'dashboard' ? 'Overview' : activeTab.replace('-', ' ')}
+              </h2>
+              <div className="flex items-center gap-4 relative">
+                {/* Notifications Bell */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsNotifOpen(!isNotifOpen)}
+                    className="p-2 text-gray-400 hover:text-black hover:bg-neutral-50 rounded-xl transition-all relative border border-gray-100 bg-white"
+                  >
+                    <Bell className="h-4.5 w-4.5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    )}
+                  </button>
+                  
+                  {isNotifOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-4 space-y-3 text-left">
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <span className="font-bold text-xs">Notifications</span>
+                        {unreadCount > 0 && (
+                          <button 
+                            onClick={handleMarkAllRead}
+                            className="text-[10px] font-bold text-neutral-500 hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                        {notifications.length === 0 ? (
+                          <p className="text-[10px] text-gray-400 italic py-4 text-center">No notifications yet.</p>
+                        ) : (
+                          notifications.map((n) => (
+                            <div 
+                              key={n.id} 
+                              className={`p-2.5 rounded-xl border text-[10px] leading-relaxed transition-all ${
+                                n.read 
+                                  ? 'bg-white border-gray-50 text-gray-400' 
+                                  : 'bg-neutral-50 border-neutral-100 text-black font-medium'
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <p className="font-bold">{n.title}</p>
+                                {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0 mt-1" />}
+                              </div>
+                              <p className="text-[9px] mt-0.5">{n.message}</p>
+                              <p className="text-[8px] text-gray-400 mt-1">{new Date(n.createdAt).toLocaleDateString()}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Credits summary (desktop top widget) */}
+                {user.role === 'USER' && (
+                  <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold bg-neutral-50 border border-neutral-100 rounded-xl px-3 py-2">
+                    <Coins className="h-3.5 w-3.5 text-black" />
+                    <span>Credits: {credits?.videoCredits ?? 0} Video | {credits?.scriptCredits ?? 0} Script</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <AnimatePresence mode="wait">
             {/* 1. Dashboard Tab */}
             {activeTab === 'dashboard' && (
               <motion.div
@@ -814,6 +1034,18 @@ export default function Home() {
               </motion.div>
             )}
 
+            {/* 6b. Assignments Tab */}
+            {activeTab === 'assignments' && (
+              <motion.div
+                key="assignments"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <AssignmentsSection />
+              </motion.div>
+            )}
+
             {/* 7. Publish Tab */}
             {activeTab === 'publish' && (
               <motion.div
@@ -823,6 +1055,42 @@ export default function Home() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 <PublishSection />
+              </motion.div>
+            )}
+
+            {/* 8. Editors Tab */}
+            {activeTab === 'editors' && (
+              <motion.div
+                key="editors"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <EditorsSection />
+              </motion.div>
+            )}
+
+            {/* 9. Connected Users (Editor Dashboard) Tab */}
+            {activeTab === 'connected-users' && (
+              <motion.div
+                key="connected-users"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <EditorDashboard />
+              </motion.div>
+            )}
+
+            {/* 10. Editor Profile Tab */}
+            {activeTab === 'editor-profile' && (
+              <motion.div
+                key="editor-profile"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <EditorProfileSection />
               </motion.div>
             )}
           </AnimatePresence>

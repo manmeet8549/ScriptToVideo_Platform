@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Play, Download, Link2, Trash2, Search, ArrowUpDown, 
-  Video, Calendar, HardDrive, Check, X, Loader2, Share2
+  Video, Calendar, HardDrive, Check, X, Loader2, Share2, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/store';
@@ -40,6 +40,26 @@ interface PublishedVideoItem {
   createdAt: string;
 }
 
+interface AssignmentItem {
+  id: string;
+  videoId: string;
+  status: string;
+  progress: number;
+}
+
+interface ConnectionItem {
+  id: string;
+  status: string;
+  editor: {
+    id: string;
+    name: string | null;
+    email: string;
+    editorProfile?: {
+      availability?: string;
+    } | null;
+  };
+}
+
 function formatBytes(bytes: number | null): string {
   if (bytes === null || bytes === undefined) return '0 B';
   if (bytes === 0) return '0 B';
@@ -66,6 +86,8 @@ function VideoCard({
   isDeletePending,
   pubVideo,
   handlePublish,
+  activeAssignment,
+  handleAssignEditor,
 }: {
   video: VideoItem;
   setActiveWatchVideo: (video: VideoItem) => void;
@@ -76,6 +98,8 @@ function VideoCard({
   isDeletePending: boolean;
   pubVideo?: PublishedVideoItem | null;
   handlePublish: (video: VideoItem) => void;
+  activeAssignment?: AssignmentItem;
+  handleAssignEditor: (video: VideoItem) => void;
 }) {
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -208,7 +232,7 @@ function VideoCard({
         </div>
 
         {/* Publish Action Button */}
-        <div className="pt-2">
+        <div className="pt-2 space-y-2">
           {!pubVideo ? (
             <button
               onClick={() => handlePublish(video)}
@@ -254,6 +278,22 @@ function VideoCard({
             >
               <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
               Publishing...
+            </button>
+          )}
+
+          {/* Editor Assignment Slot */}
+          {activeAssignment ? (
+            <div className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-2xl bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping" />
+              Editor: {activeAssignment.status} ({activeAssignment.progress}%)
+            </div>
+          ) : (
+            <button
+              onClick={() => handleAssignEditor(video)}
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-2xl border border-gray-200 text-gray-700 bg-white hover:bg-neutral-50 transition-colors shadow-xs cursor-pointer"
+            >
+              <User className="h-3.5 w-3.5" />
+              Send to Editor
             </button>
           )}
         </div>
@@ -309,6 +349,56 @@ export default function VideoLibrary() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [activeWatchVideo, setActiveWatchVideo] = useState<VideoItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // States for Assigning Editor
+  const [assigningVideo, setAssigningVideo] = useState<VideoItem | null>(null);
+  const [selectedEditorId, setSelectedEditorId] = useState<string>('');
+  const [assignmentNotes, setAssignmentNotes] = useState<string>('');
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+
+  // Fetch active connected editors
+  const { data: editorsData } = useQuery<{ connections: ConnectionItem[] }>({
+    queryKey: ['my-editors'],
+    queryFn: async () => {
+      const res = await fetch('/api/editors/my-editors');
+      if (!res.ok) throw new Error('Failed to fetch editors');
+      return res.json();
+    },
+  });
+  const connections = editorsData?.connections ?? [];
+  const activeEditors = connections.filter((c) => c.status === 'ACTIVE' && c.editor);
+
+  // Fetch user assignments to track status on cards
+  const { data: assignmentsData } = useQuery<{ assignments: AssignmentItem[] }>({
+    queryKey: ['user-assignments'],
+    queryFn: async () => {
+      const res = await fetch('/api/assignments/user');
+      if (!res.ok) throw new Error('Failed to fetch user assignments');
+      return res.json();
+    },
+  });
+  const userAssignments = assignmentsData?.assignments ?? [];
+
+  // Mutation to create assignment
+  const assignEditorMutation = useMutation({
+    mutationFn: async (payload: { videoId: string; editorId: string; notes?: string }) => {
+      const res = await fetch('/api/assignments/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create assignment');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-assignments'] });
+      setAssigningVideo(null);
+      setSelectedEditorId('');
+      setAssignmentNotes('');
+      setAssignmentError(null);
+    },
+  });
 
   // Fetch published videos to check status
   const { data: publishedData } = useQuery<{ publishedVideos: PublishedVideoItem[] }>({
@@ -484,6 +574,16 @@ export default function VideoLibrary() {
               isDeletePending={deleteMutation.isPending}
               pubVideo={publishedVideos.find((pv) => pv.projectId === video.projectId)}
               handlePublish={handlePublish}
+              activeAssignment={userAssignments.find(
+                (a) => a.videoId === video.id && !['REJECTED', 'APPROVED'].includes(a.status)
+              )}
+              handleAssignEditor={(v) => {
+                setAssigningVideo(v);
+                setAssignmentError(null);
+                if (activeEditors.length > 0) {
+                  setSelectedEditorId(activeEditors[0].editor.id);
+                }
+              }}
             />
           </motion.div>
         ))}
@@ -562,6 +662,134 @@ export default function VideoLibrary() {
                 </motion.div>
               );
             })()}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Assign Editor Modal overlay */}
+      <AnimatePresence>
+        {assigningVideo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAssigningVideo(null)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="relative bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-50 w-full max-w-md flex flex-col space-y-4"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-black font-sans">Send to Editor</h3>
+                  <p className="text-xs text-gray-500 font-sans mt-0.5 max-w-[280px] truncate">
+                    Video: {assigningVideo.title}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAssigningVideo(null)}
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {activeEditors.length === 0 ? (
+                <div className="py-6 text-center space-y-3">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-700">No active editors connected</p>
+                  <p className="text-xs text-gray-400 max-w-xs mx-auto">
+                    You must connect with an editor first using an editor key in the settings/connections page before you can assign videos.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setAssigningVideo(null);
+                      setActiveTab('settings'); // redirect to connections
+                    }}
+                    className="mt-2 text-xs font-bold text-black underline hover:text-neutral-700 cursor-pointer"
+                  >
+                    Go to Connections
+                  </button>
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!selectedEditorId) return;
+                    assignEditorMutation.mutate({
+                      videoId: assigningVideo.id,
+                      editorId: selectedEditorId,
+                      notes: assignmentNotes,
+                    });
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-600 block uppercase tracking-wider">
+                      Select Connected Editor
+                    </label>
+                    <select
+                      value={selectedEditorId}
+                      onChange={(e) => setSelectedEditorId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-gray-150 rounded-2xl text-sm font-semibold text-gray-700 focus:outline-hidden focus:ring-2 focus:ring-black/10 focus:border-black transition-all cursor-pointer"
+                    >
+                      {activeEditors.map((conn) => (
+                        <option key={conn.editor.id} value={conn.editor.id}>
+                          {conn.editor.name || conn.editor.email} ({conn.editor.email}) - {conn.editor.editorProfile?.availability || 'AVAILABLE'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-600 block uppercase tracking-wider">
+                      Editing Instructions / Notes (Optional)
+                    </label>
+                    <textarea
+                      value={assignmentNotes}
+                      onChange={(e) => setAssignmentNotes(e.target.value)}
+                      placeholder="Specify required cuts, music, style edits, or format changes..."
+                      rows={4}
+                      className="w-full px-4 py-2.5 bg-white border border-gray-150 rounded-2xl text-sm font-semibold placeholder:text-gray-400 focus:outline-hidden focus:ring-2 focus:ring-black/10 focus:border-black transition-all resize-none"
+                    />
+                  </div>
+
+                  {assignmentError && (
+                    <div className="text-xs font-semibold text-red-500 bg-red-50 border border-red-100 rounded-xl p-3">
+                      {assignmentError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAssigningVideo(null)}
+                      className="flex-1 py-2.5 text-xs font-bold rounded-2xl border border-gray-250 text-gray-600 bg-white hover:bg-neutral-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={assignEditorMutation.isPending || !selectedEditorId}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-2xl bg-black text-white hover:bg-neutral-800 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+                    >
+                      {assignEditorMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+                      Assign Video
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

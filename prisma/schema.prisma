@@ -58,10 +58,19 @@ model User {
   email        String    @unique
   emailVerified DateTime?
   image        String?
-  passwordHash String?   // null for OAuth users
+  passwordHash       String?   // null for OAuth users
+  role               Role          @default(USER)
+  accountStatus      AccountStatus @default(ACTIVE)
+  temporaryPassword  String?
+  mustChangePassword Boolean       @default(false)
+  lastLoginAt        DateTime?
+  deletedAt          DateTime?
+  deletedBy          String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  editorProfile EditorProfile?
 
   // Relations
   accounts          Account[]
@@ -74,6 +83,15 @@ model User {
   videos            Video[]
   socialAccounts    SocialAccount[]
   publishedVideos   PublishedVideo[]
+  connectionsAsUser   EditorConnection[] @relation("UserConnections")
+  connectionsAsEditor EditorConnection[] @relation("EditorConnections")
+  notifications       Notification[]
+  assignmentsAsUser   VideoAssignment[] @relation("UserAssignments")
+  assignmentsAsEditor VideoAssignment[] @relation("EditorAssignments")
+
+  // Credit System
+  creditWallet        CreditWallet?
+  creditTransactions  CreditTransaction[]
 }
 
 model Project {
@@ -232,6 +250,19 @@ enum GenerationStatus {
   FAILED
 }
 
+enum Role {
+  ADMIN
+  USER
+  EDITOR
+}
+
+enum AccountStatus {
+  ACTIVE
+  PAUSED
+  STOPPED
+  DELETED
+}
+
 model Video {
   id                   String    @id @default(cuid())
   userId               String
@@ -250,6 +281,7 @@ model Video {
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignments VideoAssignment[]
 }
 
 model SocialAccount {
@@ -293,5 +325,143 @@ model PublishedVideo {
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+}
+
+model EditorProfile {
+  id           String             @id @default(cuid())
+  userId       String             @unique
+  editorKey    String             @unique
+  displayName  String?
+  bio          String?
+  skills       String[]           @default([])
+  availability EditorAvailability @default(AVAILABLE)
+  createdAt    DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EditorConnection {
+  id             String           @id @default(cuid())
+  userId         String
+  editorId       String
+  editorKey      String
+  status         ConnectionStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now())
+  connectedAt    DateTime         @default(now())
+  disconnectedAt DateTime?
+
+  // Relations
+  user   User @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
+  editor User @relation("EditorConnections", fields: [editorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, editorId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id           String   @id @default(cuid())
+  actorId      String
+  actorRole    String?
+  targetUserId String?
+  targetId     String?
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+}
+
+model VideoAssignment {
+  id             String           @id @default(cuid())
+  videoId        String
+  userId         String
+  editorId       String
+  status         AssignmentStatus @default(PENDING)
+  progress       Int              @default(0)
+  estimatedHours Int?
+  notes          String?          @db.Text
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  completedAt    DateTime?
+
+  // Relations
+  video  Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user   User          @relation("UserAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  editor User          @relation("EditorAssignments", fields: [editorId], references: [id], onDelete: Cascade)
+  editedVideos EditedVideo[]
+}
+
+model EditedVideo {
+  id              String   @id @default(cuid())
+  assignmentId    String
+  originalVideoId String
+  editedVideoUrl  String   @db.Text
+  editedVideoKey  String
+  thumbnailUrl    String?  @db.Text
+  thumbnailKey    String?
+  version         Int      @default(1)
+  fileSize        Int?
+  uploadedBy      String
+  uploadedAt      DateTime @default(now())
+
+  // Relations
+  assignment VideoAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}
+
+model CreditWallet {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  scriptCredits  Int      @default(10)
+  voiceCredits   Int      @default(10)
+  videoCredits   Int      @default(5)
+  publishCredits Int      @default(5)
+  storageLimitGB Float    @default(10.0)
+  storageUsedGB  Float    @default(0.0)
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CreditTransaction {
+  id         String   @id @default(cuid())
+  userId     String
+  creditType String   // "SCRIPT" | "VOICE" | "VIDEO" | "PUBLISH"
+  amount     Int
+  action     String   // "ADDED" | "REMOVED" | "CONSUMED"
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  DISCONNECTED
+  BLOCKED
+}
+
+enum EditorAvailability {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  REVIEW
+  REVISION_REQUESTED
+  COMPLETED
+  APPROVED
+  REJECTED
 }
 

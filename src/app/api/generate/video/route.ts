@@ -34,6 +34,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // Check video credits balance & storage limits
+    const { hasCredits, ensureCreditWallet } = await import('@/lib/credits');
+    const sufficient = await hasCredits(session.user.id, 'VIDEO', 1);
+    if (!sufficient) {
+      return NextResponse.json({ error: 'Insufficient Credits. Contact Administrator.' }, { status: 403 });
+    }
+
+    const wallet = await ensureCreditWallet(session.user.id);
+    if (wallet.storageUsedGB >= wallet.storageLimitGB) {
+      return NextResponse.json({ error: 'Storage Limit Exceeded. Please clean up older videos.' }, { status: 403 });
+    }
+
     if (!project.scriptText?.trim()) {
       return NextResponse.json(
         { error: 'Project has no script. Generate a script first.' },

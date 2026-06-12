@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // Check script credits balance
+    const { hasCredits } = await import('@/lib/credits');
+    const sufficient = await hasCredits(session.user.id, 'SCRIPT', 1);
+    if (!sufficient) {
+      return NextResponse.json({ error: 'Insufficient Credits. Contact Administrator.' }, { status: 403 });
+    }
+
     // 2. Retrieve & decrypt the NVIDIA NIM API key
     const providerKey = await db.providerKey.findUnique({
       where: { userId_provider: { userId: session.user.id, provider: 'NVIDIA' } },
@@ -188,6 +195,18 @@ Hinglish Requirements:
             tokensUsed: nimData.usage?.total_tokens ?? null,
             model: nimData.model ?? 'meta/llama-3.1-70b-instruct',
           },
+        },
+      }),
+      db.creditWallet.update({
+        where: { userId: session.user.id },
+        data: { scriptCredits: { decrement: 1 } },
+      }),
+      db.creditTransaction.create({
+        data: {
+          userId: session.user.id,
+          creditType: 'SCRIPT',
+          amount: -1,
+          action: 'CONSUMED',
         },
       }),
     ]);

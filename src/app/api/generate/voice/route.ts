@@ -56,6 +56,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // Check voice credits balance
+    const { hasCredits } = await import('@/lib/credits');
+    const sufficient = await hasCredits(session.user.id, 'VOICE', 1);
+    if (!sufficient) {
+      return NextResponse.json({ error: 'Insufficient Credits. Contact Administrator.' }, { status: 403 });
+    }
+
     if (!project.scriptText?.trim()) {
       return NextResponse.json(
         { error: 'Project has no script. Generate a script first.' },
@@ -255,6 +262,18 @@ export async function POST(request: NextRequest) {
             duration,
             audioSizeBytes: audioBuffer.byteLength,
           },
+        },
+      }),
+      db.creditWallet.update({
+        where: { userId: session.user.id },
+        data: { voiceCredits: { decrement: 1 } },
+      }),
+      db.creditTransaction.create({
+        data: {
+          userId: session.user.id,
+          creditType: 'VOICE',
+          amount: -1,
+          action: 'CONSUMED',
         },
       }),
     ]);

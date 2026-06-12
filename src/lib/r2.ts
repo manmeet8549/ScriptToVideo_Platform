@@ -132,3 +132,44 @@ export async function checkFileExists(key: string): Promise<boolean> {
     throw error;
   }
 }
+
+/**
+ * Generates a signed PUT URL for uploading an object directly to Cloudflare R2.
+ */
+export async function generatePresignedUploadUrl(key: string, contentType: string, expiresInSeconds = 3600): Promise<string> {
+  const client = getR2Client();
+  const bucket = bucketName || '';
+
+  try {
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+    const url = await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+    return url;
+  } catch (error) {
+    console.error(`[R2_UPLOAD_SIGNED_URL] Failed generating presigned upload URL for "${key}":`, error);
+    throw error;
+  }
+}
+
+/**
+ * Retrieves the size of an object in Cloudflare R2 (in bytes) using HeadObjectCommand.
+ */
+export async function getR2FileSize(key: string): Promise<number> {
+  const client = getR2Client();
+  const bucket = bucketName || '';
+
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+    const response = await client.send(command);
+    return response.ContentLength || 0;
+  } catch (error) {
+    console.error(`[R2_FILE_SIZE] Failed to fetch file size for key "${key}":`, error);
+    return 0;
+  }
+}

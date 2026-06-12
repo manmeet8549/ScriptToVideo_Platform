@@ -191,7 +191,27 @@ export async function GET(request: NextRequest) {
             },
           },
         }),
+        db.creditWallet.update({
+          where: { userId: session.user.id },
+          data: { videoCredits: { decrement: 1 } },
+        }),
+        db.creditTransaction.create({
+          data: {
+            userId: session.user.id,
+            creditType: 'VIDEO',
+            amount: -1,
+            action: 'CONSUMED',
+          },
+        }),
       ]);
+
+      // Calculate and update user storage usage in background
+      try {
+        const { calculateStorageUsed } = await import('@/lib/credits');
+        await calculateStorageUsed(session.user.id);
+      } catch (storageErr) {
+        console.error('[STATUS_POLLER] Failed to update storage usage:', storageErr);
+      }
 
       return NextResponse.json({ status: 'completed', videoUrl: signedUrl, thumbnailUrl });
     } catch (uploadError) {

@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Video not found or access denied.' }, { status: 404 });
     }
 
+    // Check & consume publish credits
+    const { hasCredits, consumeCredits } = await import('@/lib/credits');
+    const sufficient = await hasCredits(userId, 'PUBLISH', targets.length);
+    if (!sufficient) {
+      return NextResponse.json({ error: 'Insufficient Credits. Contact Administrator.' }, { status: 403 });
+    }
+    await consumeCredits(userId, 'PUBLISH', targets.length);
+
     // 1.5 Fetch and validate accounts and verify environment variables for YouTube
     const accountIds = targets.map((t: { socialAccountId: string }) => t.socialAccountId);
     const targetAccounts = await db.socialAccount.findMany({

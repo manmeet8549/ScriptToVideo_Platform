@@ -6,6 +6,7 @@ import Google from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { authConfig } from './auth.config';
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -14,14 +15,8 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(db),
-  session: { 
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  pages: {
-    signIn: '/',  // We use our own auth overlay, not NextAuth's default page
-  },
   providers: [
     Credentials({
       name: 'credentials',
@@ -41,11 +36,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null;
 
+        if (user.accountStatus === 'DELETED' || user.accountStatus === 'STOPPED') {
+          console.warn(`[AUTH] Blocked credentials login attempt for ${email} (Status: ${user.accountStatus})`);
+          return null;
+        }
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           image: user.image,
+          role: user.role,
+          accountStatus: user.accountStatus,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -59,17 +62,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user }) {
+      if (user.id) {
+        const dbUser = await db.user.findUnique({
+          where: { id: user.id },
+          select: { accountStatus: true },
+        });
+
+        if (dbUser && (dbUser.accountStatus === 'DELETED' || dbUser.accountStatus === 'STOPPED')) {
+          console.warn(`[AUTH] Blocked OAuth login attempt for ${user.email} (Status: ${dbUser.accountStatus})`);
+          return false;
+        }
+
+        // Update lastLoginAt
+        try {
+          await db.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+        } catch (err) {
+          console.error('[AUTH] Failed to update lastLoginAt:', err);
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
+      // First let base jwt callback assign basic user fields
+      token = await authConfig.callbacks.jwt({ token, user });
+
+      // If we are in Node.js server context, check database for latest role/status if missing
+      if (!user && token.id && (!token.role || !token.accountStatus || token.mustChangePassword === undefined)) {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.id },
+          select: { role: true, accountStatus: true, mustChangePassword: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.accountStatus = dbUser.accountStatus;
+          token.mustChangePassword = dbUser.mustChangePassword;
+        }
       }
       return token;
-    },
-    async session({ session, token }) {
-      if (token?.id && session.user) {
-        session.user.id = token.id as string;
-      }
-      return session;
     },
   },
 });

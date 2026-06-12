@@ -296,3 +296,219 @@ export const avatarsApi = {
   /** Fetch details/verify a specific HeyGen avatar ID */
   get: (id: string) => apiFetch<{ avatar: HeyGenAvatar }>(`/api/avatars?id=${encodeURIComponent(id)}`),
 };
+
+// ─── Editors Connection System (Phase 3) ──────────────────────────────────────
+
+export interface EditorProfileDetails {
+  id: string;
+  userId: string;
+  editorKey: string;
+  displayName: string | null;
+  bio: string | null;
+  skills: string[];
+  availability: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
+  createdAt: string;
+  user: {
+    name: string | null;
+    email: string;
+  };
+}
+
+export interface ConnectionDetails {
+  id: string;
+  userId: string;
+  editorId: string;
+  editorKey: string;
+  status: 'ACTIVE' | 'DISCONNECTED' | 'BLOCKED';
+  createdAt: string;
+  connectedAt: string;
+  disconnectedAt: string | null;
+  editor?: {
+    name: string | null;
+    email: string;
+    editorProfile: {
+      displayName: string | null;
+      bio: string | null;
+      skills: string[];
+      availability: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
+    } | null;
+  };
+  user?: {
+    name: string | null;
+    email: string;
+  };
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export const editorsApi = {
+  connect: (editorKey: string) =>
+    apiFetch<{ success: boolean; message?: string; connection: ConnectionDetails }>('/api/editors/connect', {
+      method: 'POST',
+      body: JSON.stringify({ editorKey }),
+    }),
+
+  disconnect: (data: { connectionId?: string; editorId?: string }) =>
+    apiFetch<{ success: boolean }>('/api/editors/disconnect', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  myEditors: () =>
+    apiFetch<{ connections: ConnectionDetails[] }>('/api/editors/my-editors'),
+
+  myUsers: () =>
+    apiFetch<{ connections: ConnectionDetails[] }>('/api/editors/my-users'),
+
+  updateProfile: (data: { displayName?: string; bio?: string; skills?: string[]; availability?: 'AVAILABLE' | 'BUSY' | 'OFFLINE' }) =>
+    apiFetch<{ success: boolean; profile: EditorProfileDetails }>('/api/editors/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  getProfile: () =>
+    apiFetch<{ profile: EditorProfileDetails }>('/api/editors/profile'),
+
+  getNotifications: () =>
+    apiFetch<{ notifications: NotificationItem[] }>('/api/notifications'),
+
+  markNotificationsRead: () =>
+    apiFetch<{ success: boolean }>('/api/notifications/read', {
+      method: 'POST',
+    }),
+};
+
+export const adminConnectionsApi = {
+  list: () =>
+    apiFetch<{ connections: ConnectionDetails[] }>('/api/admin/connections'),
+
+  updateStatus: (id: string, action: 'DISCONNECT' | 'BLOCK' | 'RESTORE') =>
+    apiFetch<{ success: boolean }>(`/api/admin/connections/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action }),
+    }),
+};
+
+// ─── Video Assignment & Editing Workflow (Phase 4) ───────────────────────────
+
+export interface EditedVideoDetails {
+  id: string;
+  assignmentId: string;
+  originalVideoId: string;
+  editedVideoUrl: string;
+  editedVideoKey: string;
+  thumbnailUrl: string | null;
+  thumbnailKey: string | null;
+  version: number;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+export interface VideoAssignmentDetails {
+  id: string;
+  videoId: string;
+  userId: string;
+  editorId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'REVIEW' | 'REVISION_REQUESTED' | 'COMPLETED' | 'APPROVED' | 'REJECTED';
+  progress: number;
+  estimatedHours: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  video: {
+    id: string;
+    title: string;
+    videoUrl: string;
+    thumbnailUrl: string | null;
+  };
+  user: {
+    name: string | null;
+    email: string;
+  };
+  editor: {
+    name: string | null;
+    email: string;
+  };
+  editedVideos: EditedVideoDetails[];
+}
+
+export interface UploadUrlDetails {
+  videoUrl: string;
+  thumbnailUrl?: string;
+  videoKey: string;
+  thumbnailKey?: string;
+  version: number;
+}
+
+export const assignmentsApi = {
+  create: (data: { videoId: string; editorId: string; notes?: string }) =>
+    apiFetch<{ success: boolean; assignment: VideoAssignmentDetails }>('/api/assignments/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  accept: (assignmentId: string) =>
+    apiFetch<{ success: boolean }>('/api/assignments/accept', {
+      method: 'POST',
+      body: JSON.stringify({ assignmentId }),
+    }),
+
+  reject: (assignmentId: string) =>
+    apiFetch<{ success: boolean }>('/api/assignments/reject', {
+      method: 'POST',
+      body: JSON.stringify({ assignmentId }),
+    }),
+
+  updateProgress: (assignmentId: string, progress: number, estimatedHours?: number) =>
+    apiFetch<{ success: boolean }>('/api/assignments/progress', {
+      method: 'POST',
+      body: JSON.stringify({ assignmentId, progress, estimatedHours }),
+    }),
+
+  getUploadUrl: (assignmentId: string, contentType: string, hasThumbnail: boolean) => {
+    const qs = new URLSearchParams({ assignmentId, contentType, hasThumbnail: String(hasThumbnail) });
+    return apiFetch<UploadUrlDetails>(`/api/assignments/upload?${qs}`);
+  },
+
+  completeUpload: (data: { assignmentId: string; videoKey: string; thumbnailKey?: string; version: number }) =>
+    apiFetch<{ success: boolean; assignment: VideoAssignmentDetails }>('/api/assignments/upload', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  requestRevision: (assignmentId: string, notes: string) =>
+    apiFetch<{ success: boolean }>('/api/assignments/revision', {
+      method: 'POST',
+      body: JSON.stringify({ assignmentId, notes }),
+    }),
+
+  approve: (assignmentId: string) =>
+    apiFetch<{ success: boolean }>('/api/assignments/approve', {
+      method: 'POST',
+      body: JSON.stringify({ assignmentId }),
+    }),
+
+  getUserAssignments: () =>
+    apiFetch<{ assignments: VideoAssignmentDetails[] }>('/api/assignments/user'),
+
+  getEditorAssignments: () =>
+    apiFetch<{ assignments: VideoAssignmentDetails[] }>('/api/assignments/editor'),
+};
+
+export const adminAssignmentsApi = {
+  list: () =>
+    apiFetch<{ assignments: VideoAssignmentDetails[] }>('/api/admin/assignments'),
+
+  manage: (assignmentId: string, action: 'CANCEL' | 'REASSIGN', editorId?: string) =>
+    apiFetch<{ success: boolean }>(`/api/admin/assignments/${assignmentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action, editorId }),
+    }),
+};

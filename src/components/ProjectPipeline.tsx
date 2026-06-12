@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject, useUpdateProject, PROJECT_KEYS } from '@/hooks/useProjects';
 import { useAppStore } from '@/store/store';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import {
   generateApi,
   avatarsApi,
@@ -185,6 +186,34 @@ function StatusBadge({ status }: { status: string }) {
 // ─── Main Pipeline Component ──────────────────────────────────────────────────
 
 export default function ProjectPipeline() {
+  const { data: session } = useSession();
+  const [userCredits, setUserCredits] = useState<{
+    scriptCredits: number;
+    voiceCredits: number;
+    videoCredits: number;
+    publishCredits: number;
+    storageLimitGB: number;
+    storageUsedGB: number;
+  } | null>(null);
+
+  const fetchUserCredits = useCallback(async () => {
+    try {
+      const res = await fetch('/api/user/credits');
+      if (res.ok) {
+        const json = await res.json();
+        setUserCredits(json.wallet);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user credits:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session?.user?.role === 'USER') {
+      fetchUserCredits();
+    }
+  }, [session, fetchUserCredits]);
+
   const { selectedProjectId, setActiveTab } = useAppStore();
   const queryClient = useQueryClient();
   const updateProject = useUpdateProject();
@@ -483,13 +512,14 @@ export default function ProjectPipeline() {
         setVideoPollingActive(false);
         setActiveStepIndex(5); // automatic advance to Export
         queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(selectedProjectId) });
+        fetchUserCredits();
       } else if (result.status === 'failed') {
         setStepErrors((e) => ({ ...e, video: result.error ?? 'Video generation failed' }));
         setStepStatus((s) => ({ ...s, video: 'error' }));
         setVideoPollingActive(false);
       }
     } catch { /* fail safe polling */ }
-  }, [selectedProjectId, queryClient, setActiveStepIndex]);
+  }, [selectedProjectId, queryClient, setActiveStepIndex, fetchUserCredits]);
 
   useEffect(() => {
     if (videoPollingActive) {
@@ -536,6 +566,7 @@ export default function ProjectPipeline() {
       const result = await generateApi.generateScript(selectedProjectId);
       setGeneratedScript(result.script);
       setStepStatus((s) => ({ ...s, script: 'done' }));
+      fetchUserCredits();
       
       // Advance to Script page
       setActiveStepIndex(2);
@@ -562,6 +593,7 @@ export default function ProjectPipeline() {
       });
       setGeneratedAudio(result.audioUrl);
       setStepStatus((s) => ({ ...s, voice: 'done' }));
+      fetchUserCredits();
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(selectedProjectId) });
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.all });
     } catch (err) {
@@ -629,6 +661,7 @@ export default function ProjectPipeline() {
         avatarId: avatarToUse || undefined,
       });
 
+      fetchUserCredits();
       setVideoPollingActive(true);
       queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(selectedProjectId) });
     } catch (err) {
@@ -888,6 +921,22 @@ export default function ProjectPipeline() {
                     </div>
                   </div>
 
+                  {session?.user?.role === 'USER' && userCredits && (
+                    <>
+                      {userCredits.scriptCredits === 0 ? (
+                        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>Insufficient Credits. Contact Administrator.</span>
+                        </div>
+                      ) : userCredits.scriptCredits <= 2 ? (
+                        <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>Low Credits: You have only {userCredits.scriptCredits} script credits remaining.</span>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+
                   {stepStatus.script === 'error' && stepErrors.script && (
                     <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -897,7 +946,7 @@ export default function ProjectPipeline() {
 
                   <button
                     onClick={handleGenerateScript}
-                    disabled={!ideaConcept.trim() || stepStatus.script === 'loading'}
+                    disabled={!ideaConcept.trim() || stepStatus.script === 'loading' || (session?.user?.role === 'USER' && userCredits?.scriptCredits === 0)}
                     className="w-full flex items-center justify-center gap-2 rounded-2xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm h-12 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                   >
                     {stepStatus.script === 'loading' ? (
@@ -1276,6 +1325,22 @@ export default function ProjectPipeline() {
                     </div>
                   </div>
 
+                  {session?.user?.role === 'USER' && userCredits && (
+                    <>
+                      {userCredits.voiceCredits === 0 ? (
+                        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>Insufficient Credits. Contact Administrator.</span>
+                        </div>
+                      ) : userCredits.voiceCredits <= 2 ? (
+                        <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>Low Credits: You have only {userCredits.voiceCredits} voice credits remaining.</span>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+
                   {stepStatus.voice === 'error' && stepErrors.voice && (
                     <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -1293,7 +1358,7 @@ export default function ProjectPipeline() {
                   <div className="flex gap-4 pt-2">
                     <Button
                       onClick={handleGenerateVoice}
-                      disabled={stepStatus.voice === 'loading'}
+                      disabled={stepStatus.voice === 'loading' || (session?.user?.role === 'USER' && userCredits?.voiceCredits === 0)}
                       className="flex-1 rounded-2xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm h-12 flex items-center justify-center gap-1.5"
                     >
                       {stepStatus.voice === 'loading' ? (
@@ -1506,6 +1571,29 @@ export default function ProjectPipeline() {
                         </div>
                       </div>
 
+                      {session?.user?.role === 'USER' && userCredits && (
+                        <>
+                          {userCredits.videoCredits === 0 ? (
+                            <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700 animate-in fade-in duration-200">
+                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                              <span>Insufficient Credits. Contact Administrator.</span>
+                            </div>
+                          ) : userCredits.videoCredits <= 2 ? (
+                            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700 animate-in fade-in duration-200">
+                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                              <span>Low Credits: You have only {userCredits.videoCredits} video credits remaining.</span>
+                            </div>
+                          ) : null}
+
+                          {userCredits.storageUsedGB >= userCredits.storageLimitGB ? (
+                            <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700 animate-in fade-in duration-200">
+                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                              <span>Storage Limit Reached: You have consumed {userCredits.storageUsedGB.toFixed(2)} GB of your {userCredits.storageLimitGB} GB limit. Video generation blocked.</span>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
+
                       {stepErrors.video && (
                         <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700 animate-in fade-in duration-200">
                           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -1516,7 +1604,11 @@ export default function ProjectPipeline() {
                       <button
                         onClick={handleGenerateVideo}
                         disabled={
-                          customAvatarId.trim() !== '' && (customAvatarLoading || !customAvatar)
+                          (customAvatarId.trim() !== '' && (customAvatarLoading || !customAvatar)) ||
+                          (session?.user?.role === 'USER' && !!userCredits && (
+                            userCredits.videoCredits === 0 || 
+                            userCredits.storageUsedGB >= userCredits.storageLimitGB
+                          ))
                         }
                         className="w-full flex items-center justify-center gap-2 rounded-2xl bg-black text-white hover:bg-neutral-800 disabled:bg-neutral-300 disabled:text-neutral-500 disabled:cursor-not-allowed font-semibold text-sm h-12 transition-all shadow-xs"
                       >
