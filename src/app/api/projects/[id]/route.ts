@@ -33,8 +33,15 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     console.error('[PROJECT_GET_DETAIL] Failed to backfill videos:', err);
   }
 
+  const whereClause: any = { id: params.id };
+  if (session.user.organizationId) {
+    whereClause.organizationId = session.user.organizationId;
+  } else {
+    whereClause.userId = session.user.id;
+  }
+
   const project = await db.project.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: whereClause,
     include: {
       scripts: { orderBy: { createdAt: 'desc' } },
       voices: { orderBy: { createdAt: 'desc' } },
@@ -95,8 +102,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify ownership
+    const whereClause: any = { id: params.id };
+    if (session.user.organizationId) {
+      whereClause.organizationId = session.user.organizationId;
+    } else {
+      whereClause.userId = session.user.id;
+    }
+
     const existing = await db.project.findFirst({
-      where: { id: params.id, userId: session.user.id },
+      where: whereClause,
     });
     if (!existing) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -122,8 +136,15 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   }
 
   // Verify ownership
+  const whereClause: any = { id: params.id };
+  if (session.user.organizationId) {
+    whereClause.organizationId = session.user.organizationId;
+  } else {
+    whereClause.userId = session.user.id;
+  }
+
   const existing = await db.project.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: whereClause,
   });
   if (!existing) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });

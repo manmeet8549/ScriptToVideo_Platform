@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useAppStore } from '@/store/store';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lightbulb, FileText, Volume2, Check, Loader2 } from 'lucide-react';
+import { Lightbulb, FileText, Volume2, Check, Loader2, AlertCircle } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
 
 // Zod Validation Schemas
@@ -22,6 +22,7 @@ const signupSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string().min(6, { message: 'Confirm password must match.' }),
+  editingSpecialization: z.string().optional(),
   agreeTerms: z.boolean().refine((val) => val === true, {
     message: 'You must agree to the Terms of Service and Privacy Policy.',
   }),
@@ -37,6 +38,41 @@ export default function AuthScreen() {
   const { authView, setAuthView } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [branding, setBranding] = useState<any>(null);
+  const [roleHint] = useState<'admin' | 'user' | 'editor'>('admin');
+  const [isRegisterEnabled, setIsRegisterEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const res = await fetch('/api/branding');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.branded) {
+            setBranding(data.organization);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching branding:', err);
+      }
+    };
+    fetchBranding();
+  }, []);
+
+  useEffect(() => {
+    if (authView === 'signup') {
+      const checkRegistration = async () => {
+        try {
+          const res = await fetch('/api/auth/register');
+          const data = await res.json();
+          setIsRegisterEnabled(data.enabled);
+        } catch {
+          setIsRegisterEnabled(false);
+        }
+      };
+      checkRegistration();
+    }
+  }, [authView]);
 
   // Forms
   const {
@@ -56,7 +92,7 @@ export default function AuthScreen() {
     reset: resetSignup,
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: '', email: '', password: '', confirmPassword: '', agreeTerms: false },
+    defaultValues: { fullName: '', email: '', password: '', confirmPassword: '', editingSpecialization: '', agreeTerms: false },
   });
 
   const onLoginSubmit = async (data: LoginFormData) => {
@@ -72,8 +108,8 @@ export default function AuthScreen() {
       if (result?.error) {
         setAuthError('Invalid email or password. Please try again.');
       } else {
-        setAuthView(null); // close auth overlay — session now active
         resetLogin();
+        window.location.href = '/';
       }
     } catch {
       setAuthError('Something went wrong. Please try again.');
@@ -86,7 +122,7 @@ export default function AuthScreen() {
     setIsSubmitting(true);
     setAuthError(null);
     try {
-      // 1. Register the user via API
+      // 1. Register the user via API (always ADMIN role for public registry)
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,6 +130,7 @@ export default function AuthScreen() {
           name: data.fullName,
           email: data.email,
           password: data.password,
+          role: 'ADMIN',
         }),
       });
       const body = await res.json();
@@ -111,8 +148,8 @@ export default function AuthScreen() {
         setAuthError('Account created! Please sign in.');
         setAuthView('login');
       } else {
-        setAuthView(null);
         resetSignup();
+        window.location.href = '/';
       }
     } catch {
       setAuthError('Something went wrong. Please try again.');
@@ -139,7 +176,7 @@ export default function AuthScreen() {
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 rounded-full border border-gray-200/80 bg-white px-3.5 py-1 text-xs font-semibold text-gray-700 shadow-sm self-start mb-10">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  AI Video Creation Platform
+                  {branding ? `${branding.name} Workspace` : 'AI Video Creation Platform'}
                 </div>
 
                 {/* Heading */}
@@ -196,7 +233,12 @@ export default function AuthScreen() {
                 onClick={() => setAuthView(null)}
                 className="mt-16 md:mt-24 hover:opacity-85 transition-opacity self-start text-left cursor-pointer"
               >
-                <ThinkNextLogo variant="full" size="sm" />
+                {branding?.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={branding.logo} alt={branding.name} className="h-10 object-contain" />
+                ) : (
+                  <ThinkNextLogo variant="full" size="sm" />
+                )}
               </button>
             </div>
 
@@ -353,13 +395,18 @@ export default function AuthScreen() {
                   onClick={() => setAuthView(null)}
                   className="flex items-center gap-2 mb-16 hover:opacity-85 transition-opacity self-start text-left cursor-pointer"
                 >
-                  <ThinkNextLogo variant="full" size="sm" />
+                  {branding?.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={branding.logo} alt={branding.name} className="h-10 object-contain" />
+                  ) : (
+                    <ThinkNextLogo variant="full" size="sm" />
+                  )}
                 </button>
 
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 rounded-full border border-gray-200/80 bg-white px-3.5 py-1 text-xs font-semibold text-gray-700 shadow-sm self-start mb-10">
                   <span className="h-2 w-2 rounded-full bg-black" />
-                  Intelligent Creation Suite
+                  {branding ? `${branding.name} Workspace` : 'Intelligent Creation Suite'}
                 </div>
 
                 {/* Heading */}
@@ -381,99 +428,127 @@ export default function AuthScreen() {
             <div className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-16">
               <div className="w-full max-w-md bg-white border border-gray-100/80 rounded-3xl p-8 md:p-10 shadow-2xl shadow-neutral-100/50">
                 <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold tracking-tight text-neutral-900 mb-1">Create your Account</h2>
-                  <p className="text-sm text-gray-500">Start building your next masterpiece today.</p>
+                  <h2 className="text-2xl font-bold tracking-tight text-neutral-900 mb-1">
+                    Create Admin Account
+                  </h2>
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    Platform Administrator Registration<br />
+                    <span className="text-xs text-gray-400 mt-1 block">
+                      Create and manage users, editors, credits, API integrations, publishing, and platform operations.
+                    </span>
+                  </p>
                 </div>
 
-                <form onSubmit={handleSubmitSignup(onSignupSubmit)} className="space-y-4">
-                  {/* Full Name */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="fullName" className="text-xs font-semibold text-gray-700">Full Name</label>
-                    <input
-                      id="fullName"
-                      type="text"
-                      placeholder="Jane Doe"
-                      {...registerSignup('fullName')}
-                      className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
-                    />
-                    {signupErrors.fullName && (
-                      <p className="text-xs font-medium text-red-500">{signupErrors.fullName.message}</p>
-                    )}
+                {isRegisterEnabled === null ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-neutral-800" />
                   </div>
-
-                  {/* Email */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="signup-email" className="text-xs font-semibold text-gray-700">Email</label>
-                    <input
-                      id="signup-email"
-                      type="email"
-                      placeholder="jane@example.com"
-                      {...registerSignup('email')}
-                      className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
-                    />
-                    {signupErrors.email && (
-                      <p className="text-xs font-medium text-red-500">{signupErrors.email.message}</p>
-                    )}
-                  </div>
-
-                  {/* Password Columns */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label htmlFor="signup-password" className="text-xs font-semibold text-gray-700">Password</label>
-                      <input
-                        id="signup-password"
-                        type="password"
-                        placeholder="••••••••"
-                        {...registerSignup('password')}
-                        className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="confirmPassword" className="text-xs font-semibold text-gray-700">Confirm Password</label>
-                      <input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        {...registerSignup('confirmPassword')}
-                        className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
-                      />
+                ) : isRegisterEnabled === false ? (
+                  <div className="p-5 bg-neutral-50 border border-neutral-150 rounded-2xl flex items-start gap-3 text-xs leading-relaxed mt-4">
+                    <AlertCircle className="h-5 w-5 shrink-0 text-neutral-600 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-neutral-900 mb-0.5">Registration Restricted</p>
+                      <p className="text-gray-500 font-medium">Platform Administrator Registration is disabled because an administrator already exists. Please sign in or contact your system administrator.</p>
                     </div>
                   </div>
-                  {(signupErrors.password || signupErrors.confirmPassword) && (
-                    <p className="text-xs font-medium text-red-500">
-                      {signupErrors.password?.message || signupErrors.confirmPassword?.message}
-                    </p>
-                  )}
+                ) : (
+                  <form onSubmit={handleSubmitSignup(onSignupSubmit)} className="space-y-4">
+                    {/* Full Name */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="fullName" className="text-xs font-semibold text-gray-700">Full Name</label>
+                      <input
+                        id="fullName"
+                        type="text"
+                        placeholder="Jane Doe"
+                        {...registerSignup('fullName')}
+                        className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
+                      />
+                      {signupErrors.fullName && (
+                        <p className="text-xs font-medium text-red-500">{signupErrors.fullName.message}</p>
+                      )}
+                    </div>
 
-                  {/* T&C checkbox */}
-                  <div className="flex items-start gap-2 py-1">
-                    <input
-                      id="agreeTerms"
-                      type="checkbox"
-                      {...registerSignup('agreeTerms')}
-                      className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer mt-0.5"
-                    />
-                    <label htmlFor="agreeTerms" className="text-xs font-medium text-gray-600 select-none cursor-pointer leading-normal">
-                      I agree to the <a href="#" className="underline font-semibold text-gray-700 hover:text-black">Terms of Service</a> and <a href="#" className="underline font-semibold text-gray-700 hover:text-black">Privacy Policy</a>.
-                    </label>
-                  </div>
-                  {signupErrors.agreeTerms && (
-                    <p className="text-xs font-medium text-red-500">{signupErrors.agreeTerms.message}</p>
-                  )}
+                    {/* Email */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="signup-email" className="text-xs font-semibold text-gray-700">Email</label>
+                      <input
+                        id="signup-email"
+                        type="email"
+                        placeholder="jane@example.com"
+                        {...registerSignup('email')}
+                        className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
+                      />
+                      {signupErrors.email && (
+                        <p className="text-xs font-medium text-red-500">{signupErrors.email.message}</p>
+                      )}
+                    </div>
 
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full h-11 flex items-center justify-center gap-2 rounded-xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm transition-all"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    ) : (
-                      'Create Account'
+                    {/* Password Columns */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label htmlFor="signup-password" className="text-xs font-semibold text-gray-700">Password</label>
+                        <input
+                          id="signup-password"
+                          type="password"
+                          placeholder="••••••••"
+                          {...registerSignup('password')}
+                          className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label htmlFor="confirmPassword" className="text-xs font-semibold text-gray-700">Confirm Password</label>
+                        <input
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          {...registerSignup('confirmPassword')}
+                          className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-gray-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black font-sans"
+                        />
+                      </div>
+                    </div>
+                    {(signupErrors.password || signupErrors.confirmPassword) && (
+                      <p className="text-xs font-medium text-red-500">
+                        {signupErrors.password?.message || signupErrors.confirmPassword?.message}
+                      </p>
                     )}
-                  </button>
-                </form>
+
+                    {/* T&C checkbox */}
+                    <div className="flex items-start gap-2 py-1">
+                      <input
+                        id="agreeTerms"
+                        type="checkbox"
+                        {...registerSignup('agreeTerms')}
+                        className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer mt-0.5"
+                      />
+                      <label htmlFor="agreeTerms" className="text-xs font-medium text-gray-600 select-none cursor-pointer leading-normal">
+                        I agree to the <a href="#" className="underline font-semibold text-gray-700 hover:text-black">Terms of Service</a> and <a href="#" className="underline font-semibold text-gray-700 hover:text-black">Privacy Policy</a>.
+                      </label>
+                    </div>
+                    {signupErrors.agreeTerms && (
+                      <p className="text-xs font-medium text-red-500">{signupErrors.agreeTerms.message}</p>
+                    )}
+
+                    {/* Auth Error */}
+                    {authError && (
+                      <p className="text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                        {authError}
+                      </p>
+                    )}
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full h-11 flex items-center justify-center gap-2 rounded-xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm transition-all"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                      ) : (
+                        'Create Admin Account'
+                      )}
+                    </button>
+                  </form>
+                )}
 
                 {/* Divider */}
                 <div className="relative my-5 text-center">
@@ -564,3 +639,4 @@ export default function AuthScreen() {
     </div>
   );
 }
+

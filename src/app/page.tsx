@@ -20,6 +20,12 @@ import EditorsSection from '@/components/EditorsSection';
 import EditorDashboard from '@/components/EditorDashboard';
 import EditorProfileSection from '@/components/EditorProfileSection';
 import AssignmentsSection from '@/components/AssignmentsSection';
+import OrgSettingsSection from '@/components/OrgSettingsSection';
+import ContentCalendarSection from '@/components/ContentCalendarSection';
+import AIPlannerSection from '@/components/AIPlannerSection';
+import CampaignsSection from '@/components/CampaignsSection';
+import KPIDashboardSection from '@/components/KPIDashboardSection';
+import ApprovalQueueSection from '@/components/ApprovalQueueSection';
 
 import { useAppStore } from '@/store/store';
 import { useProjects } from '@/hooks/useProjects';
@@ -29,7 +35,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, FolderClosed, Copy, KeyRound, Settings, 
   LogOut, Plus, ArrowRight, Video, FileText, Volume2, Share2,
-  Shield, Users, User, Coins, Bell
+  Shield, Users, User, Coins, Bell, Calendar, Sparkles, Layers,
+  BarChart3, CheckSquare
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -128,7 +135,7 @@ export default function Home() {
     isUrlUpdatingStateRef.current = true;
 
     // Default or parsed tab
-    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish', 'editors', 'connected-users', 'editor-profile', 'assignments'] as const;
+    const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish', 'editors', 'connected-users', 'editor-profile', 'assignments', 'org-settings'] as const;
     type TabType = typeof validTabs[number];
     if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
       setActiveTab(tabParam as TabType);
@@ -229,7 +236,7 @@ export default function Home() {
         const stepParam = params.get('step') ? parseInt(params.get('step') || '') : null;
         const authParam = params.get('auth');
 
-        const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish', 'editors', 'connected-users', 'editor-profile', 'assignments'] as const;
+        const validTabs = ['dashboard', 'projects', 'templates', 'api-keys', 'settings', 'pipeline', 'video-library', 'publish', 'editors', 'connected-users', 'editor-profile', 'assignments', 'org-settings'] as const;
         type TabType = typeof validTabs[number];
         if (tabParam && (validTabs as readonly string[]).includes(tabParam)) {
           setActiveTab(tabParam as TabType);
@@ -352,23 +359,38 @@ export default function Home() {
 
   // ─── AUTHENTICATED SIDEBAR LAYOUT ──────────────────────────────────────────
   if (status === 'authenticated' && user) {
+    const userSidebarItems: Array<{
+      id: 'dashboard' | 'projects' | 'templates' | 'api-keys' | 'settings' | 'pipeline' | 'video-library' | 'publish' | 'editors' | 'connected-users' | 'editor-profile' | 'assignments' | 'org-settings' | 'calendar' | 'planner' | 'campaigns' | 'kpis' | 'approvals';
+      label: string;
+      icon: any;
+    }> = [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'projects', label: 'Projects', icon: FolderClosed },
+      { id: 'calendar', label: 'Calendar', icon: Calendar },
+      { id: 'planner', label: 'AI Planner', icon: Sparkles },
+      { id: 'campaigns', label: 'Campaigns', icon: Layers },
+      { id: 'kpis', label: 'KPI Dashboard', icon: BarChart3 },
+      { id: 'templates', label: 'Templates', icon: Copy },
+      { id: 'video-library', label: 'Video Library', icon: Video },
+      { id: 'assignments', label: 'Assignments', icon: FileText },
+      { id: 'publish', label: 'Publish', icon: Share2 },
+      { id: 'api-keys', label: 'API Keys', icon: KeyRound },
+      { id: 'editors', label: 'Editors', icon: Users },
+      { id: 'settings', label: 'Settings', icon: Settings },
+    ];
+
+    if (user.role === 'ORG_ADMIN' || user.role === 'SUPER_ADMIN') {
+      userSidebarItems.push({ id: 'org-settings' as const, label: 'Org Settings', icon: Shield });
+      userSidebarItems.push({ id: 'approvals' as const, label: 'Approval Queue', icon: CheckSquare });
+    }
+
     const sidebarItems = user.role === 'EDITOR'
       ? [
           { id: 'connected-users' as const, label: 'Connected Users', icon: Users },
           { id: 'editor-profile' as const, label: 'My Profile', icon: User },
           { id: 'settings' as const, label: 'Settings', icon: Settings },
         ]
-      : [
-          { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'projects' as const, label: 'Projects', icon: FolderClosed },
-          { id: 'templates' as const, label: 'Templates', icon: Copy },
-          { id: 'video-library' as const, label: 'Video Library', icon: Video },
-          { id: 'assignments' as const, label: 'Assignments', icon: FileText },
-          { id: 'publish' as const, label: 'Publish', icon: Share2 },
-          { id: 'api-keys' as const, label: 'API Keys', icon: KeyRound },
-          { id: 'editors' as const, label: 'Editors', icon: Users },
-          { id: 'settings' as const, label: 'Settings', icon: Settings },
-        ];
+      : userSidebarItems;
 
     const userInitials = user.name
       ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
@@ -417,6 +439,15 @@ export default function Home() {
                 >
                   <Shield className="h-4.5 w-4.5 text-gray-400" />
                   Admin Panel
+                </Link>
+              )}
+              {user.role === 'SUPER_ADMIN' && (
+                <Link
+                  href="/super-admin"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 text-left text-gray-500 hover:text-black hover:bg-neutral-50"
+                >
+                  <Shield className="h-4.5 w-4.5 text-gray-400" />
+                  Super Admin
                 </Link>
               )}
             </nav>
@@ -559,6 +590,16 @@ export default function Home() {
                       >
                         <Shield className="h-4.5 w-4.5 text-gray-400" />
                         Admin Panel
+                      </Link>
+                    )}
+                    {user.role === 'SUPER_ADMIN' && (
+                      <Link
+                        href="/super-admin"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold rounded-2xl transition-all duration-200 text-left text-gray-500 hover:text-black hover:bg-neutral-50"
+                      >
+                        <Shield className="h-4.5 w-4.5 text-gray-400" />
+                        Super Admin
                       </Link>
                     )}
                   </nav>
@@ -1091,6 +1132,78 @@ export default function Home() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 <EditorProfileSection />
+              </motion.div>
+            )}
+
+            {/* 11. Org Settings Tab */}
+            {activeTab === 'org-settings' && (
+              <motion.div
+                key="org-settings"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <OrgSettingsSection />
+              </motion.div>
+            )}
+
+            {/* 12. Content Calendar Tab */}
+            {activeTab === 'calendar' && (
+              <motion.div
+                key="calendar"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <ContentCalendarSection />
+              </motion.div>
+            )}
+
+            {/* 13. AI Content Planner Tab */}
+            {activeTab === 'planner' && (
+              <motion.div
+                key="planner"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <AIPlannerSection />
+              </motion.div>
+            )}
+
+            {/* 14. Campaign Management Tab */}
+            {activeTab === 'campaigns' && (
+              <motion.div
+                key="campaigns"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <CampaignsSection />
+              </motion.div>
+            )}
+
+            {/* 15. KPI Dashboard Tab */}
+            {activeTab === 'kpis' && (
+              <motion.div
+                key="kpis"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <KPIDashboardSection />
+              </motion.div>
+            )}
+
+            {/* 16. Approval Queue Tab */}
+            {activeTab === 'approvals' && (
+              <motion.div
+                key="approvals"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <ApprovalQueueSection />
               </motion.div>
             )}
           </AnimatePresence>

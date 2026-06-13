@@ -6,6 +6,7 @@ declare module 'next-auth' {
     role?: string;
     accountStatus?: string;
     mustChangePassword?: boolean;
+    organizationId?: string | null;
   }
 
   interface Session {
@@ -14,6 +15,7 @@ declare module 'next-auth' {
       role: string;
       accountStatus: string;
       mustChangePassword: boolean;
+      organizationId?: string | null;
     } & DefaultSession['user']
   }
 }
@@ -24,6 +26,7 @@ declare module '@auth/core/jwt' {
     role?: string;
     accountStatus?: string;
     mustChangePassword?: boolean;
+    organizationId?: string | null;
   }
 }
 
@@ -38,6 +41,7 @@ export const authConfig = {
         token.role = user.role;
         token.accountStatus = user.accountStatus;
         token.mustChangePassword = user.mustChangePassword;
+        token.organizationId = user.organizationId;
       }
       return token;
     },
@@ -47,6 +51,7 @@ export const authConfig = {
         session.user.role = token.role as string;
         session.user.accountStatus = token.accountStatus as string;
         session.user.mustChangePassword = !!token.mustChangePassword;
+        session.user.organizationId = token.organizationId as string | null | undefined;
       }
       return session;
     },

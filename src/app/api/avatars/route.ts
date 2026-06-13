@@ -22,14 +22,32 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const avatarId = searchParams.get('id');
 
-  // Retrieve stored HeyGen key
-  const providerKey = await db.providerKey.findUnique({
-    where: { userId_provider: { userId: session.user.id, provider: 'HEYGEN' } },
-  });
+  // Retrieve stored HeyGen key (check organization first, then user)
+  let providerKey = null;
+  if (session.user.organizationId) {
+    providerKey = await db.providerKey.findUnique({
+      where: {
+        organizationId_provider: {
+          organizationId: session.user.organizationId,
+          provider: 'HEYGEN',
+        },
+      },
+    });
+  }
+  if (!providerKey) {
+    providerKey = await db.providerKey.findUnique({
+      where: {
+        userId_provider: {
+          userId: session.user.id,
+          provider: 'HEYGEN',
+        },
+      },
+    });
+  }
 
   if (!providerKey) {
     return NextResponse.json(
-      { error: 'HeyGen API key not configured. Please add it in API Keys settings.' },
+      { error: 'HeyGen API key not configured. Please add it in API Keys or Org settings.' },
       { status: 400 }
     );
   }

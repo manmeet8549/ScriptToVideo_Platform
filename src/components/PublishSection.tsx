@@ -130,6 +130,19 @@ export default function PublishSection() {
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [historyTab, setHistoryTab] = useState<'all' | 'published' | 'scheduled' | 'pending' | 'failed'>('all');
 
+  // State - Organization Settings & Scheduling
+  const [org, setOrg] = useState<any>(null);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
+
+  useEffect(() => {
+    fetch('/api/organizations')
+      .then((res) => res.json())
+      .then((data) => setOrg(data.organization))
+      .catch((err) => console.error('Error loading org profile in publish:', err));
+  }, []);
+
   // Fetch Videos
   const { data: videosData } = useQuery<{ videos: VideoItem[] }>({
     queryKey: ['videos'],
@@ -391,12 +404,16 @@ export default function PublishSection() {
         throw new Error('Please select at least one connected social account to publish.');
       }
 
-      const res = await fetch('/api/publish/upload', {
+      const endpoint = (isScheduled || org?.approvalRequired) ? '/api/publish/schedule' : '/api/publish/upload';
+      const scheduledFor = isScheduled ? new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString() : new Date().toISOString();
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           videoId: selectedVideo.id,
           targets,
+          scheduledFor,
         }),
       });
 
@@ -407,6 +424,13 @@ export default function PublishSection() {
       return res.json();
     },
     onSuccess: (data) => {
+      if (isScheduled || org?.approvalRequired) {
+        alert(data.message || 'Post Scheduled / Submitted for Approval!');
+        setSelectedVideo(null);
+        refetchHistory();
+        queryClient.invalidateQueries({ queryKey: ['scheduledPosts'] });
+        return;
+      }
       const typedData = data as {
         uploads: Array<{
           publishedVideoId: string;
@@ -961,27 +985,83 @@ export default function PublishSection() {
                         </div>
                       )}
 
-                    </div>
+                      {/* Schedule Post Toggle */}
+                      <div className="p-5 border border-gray-100 rounded-3xl bg-gray-50/10 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-black flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isScheduled}
+                              onChange={(e) => {
+                                setIsScheduled(e.target.checked);
+                                if (e.target.checked && !scheduledDate) {
+                                  // Default to tomorrow
+                                  const tomorrow = new Date();
+                                  tomorrow.setDate(tomorrow.getDate() + 1);
+                                  setScheduledDate(tomorrow.toISOString().split('T')[0]);
+                                }
+                              }}
+                              className="h-4 w-4 rounded-sm text-black focus:ring-black accent-black cursor-pointer"
+                            />
+                            Schedule Post for Later
+                          </label>
+                          {org?.approvalRequired && (
+                            <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              Approval Required
+                            </span>
+                          )}
+                        </div>
 
-                    {/* Publish Submit Action */}
-                    <div className="pt-4 border-t border-gray-50">
-                      <button
-                        onClick={() => publishMutation.mutate()}
-                        disabled={publishMutation.isPending || activeUploads.length > 0}
-                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-black text-white hover:bg-neutral-800 disabled:opacity-40 font-extrabold text-sm transition-all cursor-pointer shadow-xs"
-                      >
-                        {publishMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                            Preparing distribution upload...
-                          </>
-                        ) : (
-                          <>
-                            <UploadCloud className="h-4.5 w-4.5" />
-                            Publish to Selected Platforms
-                          </>
+                        {isScheduled && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-gray-500">Date</label>
+                              <input
+                                type="date"
+                                value={scheduledDate}
+                                onChange={(e) => setScheduledDate(e.target.value)}
+                                className="w-full bg-white border border-gray-150 rounded-xl px-3 py-2 text-xs font-semibold"
+                                required
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-gray-500">Time</label>
+                              <input
+                                type="time"
+                                value={scheduledTime}
+                                onChange={(e) => setScheduledTime(e.target.value)}
+                                className="w-full bg-white border border-gray-150 rounded-xl px-3 py-2 text-xs font-semibold"
+                                required
+                              />
+                            </div>
+                          </div>
                         )}
-                      </button>
+                      </div>
+
+                      {/* Publish Submit Action */}
+                      <div className="pt-4 border-t border-gray-50">
+                        <button
+                          onClick={() => publishMutation.mutate()}
+                          disabled={publishMutation.isPending || activeUploads.length > 0}
+                          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-black text-white hover:bg-neutral-800 disabled:opacity-40 font-extrabold text-sm transition-all cursor-pointer shadow-xs"
+                        >
+                          {publishMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                              {org?.approvalRequired ? 'Submitting request...' : 'Preparing distribution upload...'}
+                            </>
+                          ) : (
+                            <>
+                              <UploadCloud className="h-4.5 w-4.5" />
+                              {org?.approvalRequired
+                                ? 'Submit for Approval'
+                                : isScheduled
+                                ? 'Schedule Post'
+                                : 'Publish to Selected Platforms'}
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 ) : (

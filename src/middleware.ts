@@ -8,6 +8,7 @@ export default auth(async (req) => {
   const path = nextUrl.pathname;
 
   // Define route classifications
+  const isSuperAdminRoute = path.startsWith('/super-admin') || path.startsWith('/api/super-admin');
   const isAdminRoute = path.startsWith('/admin') || path.startsWith('/api/admin');
   const isEditorRoute = path.startsWith('/editor') || path.startsWith('/api/editor');
   
@@ -17,7 +18,7 @@ export default auth(async (req) => {
     !path.startsWith('/api/auth') && 
     path !== '/api/user/settings';
 
-  const isProtectedRoute = isAdminRoute || isEditorRoute || isUserRoute;
+  const isProtectedRoute = isSuperAdminRoute || isAdminRoute || isEditorRoute || isUserRoute;
 
   // 1. Unauthenticated checks for protected routes
   if (!isLoggedIn) {
@@ -67,9 +68,30 @@ export default auth(async (req) => {
       }
     }
 
-    // C. Enforce Admin Routes (Only ADMIN)
+    // Root path redirection based on role
+    if (path === '/') {
+      if (role === 'SUPER_ADMIN' || role === 'ORG_ADMIN' || role === 'ADMIN') {
+        return NextResponse.redirect(new URL('/admin/dashboard', nextUrl.origin));
+      } else if (role === 'EDITOR') {
+        return NextResponse.redirect(new URL('/editor/dashboard', nextUrl.origin));
+      } else {
+        return NextResponse.redirect(new URL('/user/dashboard', nextUrl.origin));
+      }
+    }
+
+    // C. Enforce Super Admin Routes (Only SUPER_ADMIN)
+    if (isSuperAdminRoute) {
+      if (role !== 'SUPER_ADMIN') {
+        if (path.startsWith('/api')) {
+          return NextResponse.json({ error: 'Access denied. Super Administrator role required.' }, { status: 403 });
+        }
+        return new NextResponse('Access denied. Super Administrator role required.', { status: 403 });
+      }
+    }
+
+    // D. Enforce Admin Routes (SUPER_ADMIN, ORG_ADMIN or legacy ADMIN)
     if (isAdminRoute) {
-      if (role !== 'ADMIN') {
+      if (role !== 'SUPER_ADMIN' && role !== 'ORG_ADMIN' && role !== 'ADMIN') {
         if (path.startsWith('/api')) {
           return NextResponse.json({ error: 'Access denied. Administrator role required.' }, { status: 403 });
         }
@@ -77,9 +99,9 @@ export default auth(async (req) => {
       }
     }
 
-    // D. Enforce Editor Routes (ADMIN + EDITOR)
+    // E. Enforce Editor Routes (SUPER_ADMIN, ORG_ADMIN, EDITOR or legacy ADMIN)
     if (isEditorRoute) {
-      if (role !== 'ADMIN' && role !== 'EDITOR') {
+      if (role !== 'SUPER_ADMIN' && role !== 'ORG_ADMIN' && role !== 'EDITOR' && role !== 'ADMIN') {
         if (path.startsWith('/api')) {
           return NextResponse.json({ error: 'Access denied. Editor role required.' }, { status: 403 });
         }
@@ -87,9 +109,9 @@ export default auth(async (req) => {
       }
     }
 
-    // E. Enforce User Routes (ADMIN + USER)
+    // F. Enforce User Routes (SUPER_ADMIN, ORG_ADMIN, USER or legacy ADMIN)
     if (isUserRoute) {
-      if (role !== 'ADMIN' && role !== 'USER') {
+      if (role !== 'SUPER_ADMIN' && role !== 'ORG_ADMIN' && role !== 'USER' && role !== 'ADMIN') {
         if (path.startsWith('/api')) {
           return NextResponse.json({ error: 'Access denied. User role required.' }, { status: 403 });
         }

@@ -10,8 +10,15 @@ export async function GET() {
   }
 
   try {
+    const whereClause: any = {};
+    if (session.user.organizationId) {
+      whereClause.organizationId = session.user.organizationId;
+    } else {
+      whereClause.userId = session.user.id;
+    }
+
     const accounts = await db.socialAccount.findMany({
-      where: { userId: session.user.id },
+      where: whereClause,
       select: {
         id: true,
         platform: true,
@@ -50,11 +57,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Verify ownership
+    const whereClause: any = { id: accountId };
+    if (session.user.organizationId) {
+      whereClause.organizationId = session.user.organizationId;
+    } else {
+      whereClause.userId = session.user.id;
+    }
+
     const account = await db.socialAccount.findFirst({
-      where: {
-        id: accountId,
-        userId: session.user.id,
-      },
+      where: whereClause,
     });
 
     if (!account) {
@@ -87,13 +98,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'setDefault') {
-      // Run in transaction: unset default for all accounts on this platform for this user, then set default on the selected one
+      // Run in transaction: unset default for all accounts on this platform for this organization/user, then set default on the selected one
       await db.$transaction([
         db.socialAccount.updateMany({
-          where: {
-            userId: session.user.id,
-            platform: account.platform,
-          },
+          where: session.user.organizationId
+            ? { organizationId: session.user.organizationId, platform: account.platform }
+            : { userId: session.user.id, platform: account.platform },
           data: { isDefault: false },
         }),
         db.socialAccount.update({

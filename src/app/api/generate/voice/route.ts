@@ -70,14 +70,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Retrieve ElevenLabs key
-    const providerKey = await db.providerKey.findUnique({
-      where: { userId_provider: { userId: session.user.id, provider: 'ELEVENLABS' } },
-    });
+    // 2. Retrieve ElevenLabs key (check organization first, then user)
+    let providerKey = null;
+    if (session.user.organizationId) {
+      providerKey = await db.providerKey.findUnique({
+        where: {
+          organizationId_provider: {
+            organizationId: session.user.organizationId,
+            provider: 'ELEVENLABS',
+          },
+        },
+      });
+    }
+    if (!providerKey) {
+      providerKey = await db.providerKey.findUnique({
+        where: {
+          userId_provider: {
+            userId: session.user.id,
+            provider: 'ELEVENLABS',
+          },
+        },
+      });
+    }
 
     if (!providerKey) {
       return NextResponse.json(
-        { error: 'ElevenLabs API key not configured. Please add it in API Keys settings.' },
+        { error: 'ElevenLabs API key not configured. Please add it in API Keys or Org settings.' },
         { status: 400 }
       );
     }

@@ -17,6 +17,7 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
+        phoneNumber: true,
         role: true,
         accountStatus: true,
         createdAt: true,
@@ -24,6 +25,8 @@ export async function GET() {
         editorProfile: {
           select: {
             editorKey: true,
+            editorId: true,
+            skills: true,
           },
         },
       },
@@ -34,11 +37,14 @@ export async function GET() {
       id: e.id,
       name: e.name,
       email: e.email,
+      phoneNumber: e.phoneNumber || null,
       role: e.role,
       status: e.accountStatus,
       createdAt: e.createdAt,
       lastLoginAt: e.lastLoginAt,
       editorKey: e.editorProfile?.editorKey || null,
+      editorId: e.editorProfile?.editorId || null,
+      specialization: e.editorProfile?.skills?.[0] || null,
     }));
 
     return NextResponse.json({ editors: formatted });
@@ -55,7 +61,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { fullName, email } = await request.json();
+    const { fullName, email, phoneNumber, specialization } = await request.json();
 
     if (!fullName?.trim() || !email?.trim()) {
       return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 });
@@ -81,6 +87,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: fullName.trim(),
           email: email.trim().toLowerCase(),
+          phoneNumber: phoneNumber?.trim() || null,
           passwordHash,
           temporaryPassword: tempPassword,
           mustChangePassword: true,
@@ -89,10 +96,15 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      const editorCount = await tx.editorProfile.count();
+      const generatedEditorId = `EDT-${1000 + editorCount + 1}`;
+
       const profile = await tx.editorProfile.create({
         data: {
           userId: u.id,
           editorKey,
+          editorId: generatedEditorId,
+          skills: specialization?.trim() ? [specialization.trim()] : [],
         },
       });
 
@@ -100,10 +112,12 @@ export async function POST(request: NextRequest) {
         id: u.id,
         name: u.name,
         email: u.email,
+        phoneNumber: u.phoneNumber,
         role: u.role,
         accountStatus: u.accountStatus,
         createdAt: u.createdAt,
         editorKey: profile.editorKey,
+        editorId: profile.editorId,
       };
     });
 
@@ -111,6 +125,7 @@ export async function POST(request: NextRequest) {
     await logActivity(session.user.id, 'EDITOR_CREATED', newEditor.id, {
       email: newEditor.email,
       editorKey: newEditor.editorKey,
+      editorId: newEditor.editorId,
     });
 
     return NextResponse.json({

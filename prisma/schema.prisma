@@ -66,6 +66,8 @@ model User {
   lastLoginAt        DateTime?
   deletedAt          DateTime?
   deletedBy          String?
+  phoneNumber        String?
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,10 +90,14 @@ model User {
   notifications       Notification[]
   assignmentsAsUser   VideoAssignment[] @relation("UserAssignments")
   assignmentsAsEditor VideoAssignment[] @relation("EditorAssignments")
+  approvalRequests    ApprovalRequest[]
 
   // Credit System
   creditWallet        CreditWallet?
   creditTransactions  CreditTransaction[]
+
+  organizationId      String?
+  organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model Project {
@@ -120,6 +126,9 @@ model Project {
   generationHistory GenerationHistory[]
   videos            Video[]
   publishedVideos   PublishedVideo[]
+
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model Script {
@@ -192,10 +201,13 @@ model ProviderKey {
   prefix    String?  // Prefix (e.g., nvapi-, sk_)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
+  @@unique([organizationId, provider])
 }
 
 model UserSettings {
@@ -252,6 +264,8 @@ enum GenerationStatus {
 
 enum Role {
   ADMIN
+  SUPER_ADMIN
+  ORG_ADMIN
   USER
   EDITOR
 }
@@ -278,10 +292,17 @@ model Video {
   thumbnailGeneratedAt DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+  campaignId           String?
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assignments VideoAssignment[]
+  campaign     Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  scheduledPosts ScheduledPost[]
+  approvalRequests ApprovalRequest[]
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model SocialAccount {
@@ -304,6 +325,10 @@ model SocialAccount {
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   publishedVideos PublishedVideo[]
+  scheduledPosts  ScheduledPost[]
+
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model PublishedVideo {
@@ -320,6 +345,10 @@ model PublishedVideo {
   postUrl         String?  @db.Text
   errorMessage    String?  @db.Text
   publishedAt     DateTime?
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  comments        Int      @default(0)
+  shares          Int      @default(0)
   createdAt       DateTime @default(now())
 
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -333,6 +362,8 @@ model EditorProfile {
   editorKey    String             @unique
   displayName  String?
   bio          String?
+  editorId     String?
+
   skills       String[]           @default([])
   availability EditorAvailability @default(AVAILABLE)
   createdAt    DateTime           @default(now())
@@ -429,6 +460,9 @@ model CreditWallet {
   updatedAt      DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model CreditTransaction {
@@ -463,5 +497,214 @@ enum AssignmentStatus {
   COMPLETED
   APPROVED
   REJECTED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  PAID
+  PENDING
+  FAILED
+  VOID
+}
+
+model Organization {
+  id               String             @id @default(cuid())
+  name             String
+  slug             String             @unique
+  logo             String?
+  primaryColor     String?            @default("#000000")
+  secondaryColor   String?            @default("#ffffff")
+  domain           String?            @unique
+  status           OrganizationStatus @default(ACTIVE)
+  subscriptionPlan SubscriptionPlan   @default(FREE)
+  approvalRequired Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  users            User[]
+  projects         Project[]
+  videos           Video[]
+  socialAccounts   SocialAccount[]
+  creditWallets    CreditWallet[]
+  subscriptions    Subscription[]
+  invoices         Invoice[]
+  customDomains    CustomDomain[]
+  invitations      TeamInvitation[]
+  providerKeys     ProviderKey[]
+  scheduledPosts   ScheduledPost[]
+  campaigns        Campaign[]
+  approvalRequests ApprovalRequest[]
+  contentPlans     ContentPlan[]
+  recurringTemplates RecurringTemplate[]
+  automationRules  AutomationRule[]
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  organizationId String
+  plan           SubscriptionPlan
+  status         SubscriptionStatus @default(ACTIVE)
+  startDate      DateTime           @default(now())
+  endDate        DateTime?
+  monthlyCredits Int                @default(100)
+  storageLimit   Float              @default(10.0)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  organizationId String
+  amount         Float
+  currency       String        @default("USD")
+  status         InvoiceStatus @default(PENDING)
+  invoiceNumber  String        @unique
+  issuedAt       DateTime      @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model CustomDomain {
+  id             String   @id @default(cuid())
+  organizationId String
+  domain         String   @unique
+  verified       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model TeamInvitation {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  role           Role
+  token          String   @unique
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model ScheduledPost {
+  id             String        @id @default(cuid())
+  organizationId String
+  videoId        String
+  socialAccountId String?
+  platform       String        // "youtube" | "linkedin" | "facebook" | "instagram" | "twitter"
+  scheduledFor   DateTime
+  status         String        // "PENDING" | "PENDING_APPROVAL" | "APPROVED" | "PUBLISHED" | "FAILED"
+  publishedAt    DateTime?
+  errorMessage   String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  video          Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  socialAccount  SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  campaignId     String?
+  campaign       Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+}
+
+model Campaign {
+  id             String          @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  videos         Video[]
+  scheduledPosts ScheduledPost[]
+}
+
+model ApprovalRequest {
+  id             String        @id @default(cuid())
+  organizationId String
+  videoId        String
+  userId         String        // Requested by
+  status         String        // "PENDING" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED"
+  requestedDate  DateTime      @default(now())
+  feedback       String?       @db.Text
+  actionedAt     DateTime?
+  actionedById   String?
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  video          Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ContentPlan {
+  id             String            @id @default(cuid())
+  organizationId String
+  niche          String
+  targetAudience String
+  frequency      String
+  createdAt      DateTime          @default(now())
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items          ContentPlanItem[]
+}
+
+model ContentPlanItem {
+  id            String      @id @default(cuid())
+  contentPlanId String
+  topic         String
+  hook          String      @db.Text
+  scriptIdea    String      @db.Text
+  publishingDate DateTime
+  status        String      @default("PLANNED") // "PLANNED" | "GENERATED" | "SCHEDULED" | "PUBLISHED"
+  videoId       String?
+
+  contentPlan   ContentPlan @relation(fields: [contentPlanId], references: [id], onDelete: Cascade)
+}
+
+model RecurringTemplate {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  prompt         String        @db.Text
+  frequency      String        // DAILY, WEEKLY, MONTHLY
+  dayOfWeek      Int?          // 0-6
+  dayOfMonth     Int?          // 1-31
+  timeOfDay      String        // HH:MM
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model AutomationRule {
+  id             String        @id @default(cuid())
+  organizationId String
+  triggerEvent   String
+  actionType     String
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
 

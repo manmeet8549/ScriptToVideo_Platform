@@ -15,11 +15,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify ownership
+    const whereClause: any = { id };
+    if (session.user.organizationId) {
+      whereClause.organizationId = session.user.organizationId;
+    } else {
+      whereClause.userId = session.user.id;
+    }
+
     const account = await db.socialAccount.findFirst({
-      where: {
-        id,
-        userId: session.user.id,
-      },
+      where: whereClause,
     });
 
     if (!account) {

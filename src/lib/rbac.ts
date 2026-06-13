@@ -26,30 +26,30 @@ async function resolveUser(userInput: UserInput): Promise<{ role: Role; accountS
 // ─── Permission Helpers ──────────────────────────────────────────────────────
 
 /**
- * Checks if the user has ADMIN role.
+ * Checks if the user has ADMIN, SUPER_ADMIN, or ORG_ADMIN role.
  */
 export async function isAdmin(user: UserInput): Promise<boolean> {
   const resolved = await resolveUser(user);
   if (!resolved) return false;
-  return resolved.role === Role.ADMIN;
+  return resolved.role === Role.ADMIN || resolved.role === Role.SUPER_ADMIN || resolved.role === Role.ORG_ADMIN;
 }
 
 /**
- * Checks if the user has USER or ADMIN role.
+ * Checks if the user has USER, ADMIN, SUPER_ADMIN, or ORG_ADMIN role.
  */
 export async function isUser(user: UserInput): Promise<boolean> {
   const resolved = await resolveUser(user);
   if (!resolved) return false;
-  return resolved.role === Role.ADMIN || resolved.role === Role.USER;
+  return resolved.role === Role.ADMIN || resolved.role === Role.SUPER_ADMIN || resolved.role === Role.ORG_ADMIN || resolved.role === Role.USER;
 }
 
 /**
- * Checks if the user has EDITOR or ADMIN role.
+ * Checks if the user has EDITOR, ADMIN, SUPER_ADMIN, or ORG_ADMIN role.
  */
 export async function isEditor(user: UserInput): Promise<boolean> {
   const resolved = await resolveUser(user);
   if (!resolved) return false;
-  return resolved.role === Role.ADMIN || resolved.role === Role.EDITOR;
+  return resolved.role === Role.ADMIN || resolved.role === Role.SUPER_ADMIN || resolved.role === Role.ORG_ADMIN || resolved.role === Role.EDITOR;
 }
 
 // ─── Account Status Checks ────────────────────────────────────────────────────

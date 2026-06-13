@@ -25,8 +25,15 @@ export async function GET() {
     console.error('[PROJECTS_GET] Failed to backfill videos:', err);
   }
 
+  const whereClause: any = {};
+  if (session.user.organizationId) {
+    whereClause.organizationId = session.user.organizationId;
+  } else {
+    whereClause.userId = session.user.id;
+  }
+
   const projects = await db.project.findMany({
-    where: { userId: session.user.id },
+    where: whereClause,
     orderBy: { createdAt: 'desc' },
     include: {
       _count: {
@@ -88,6 +95,7 @@ export async function POST(request: NextRequest) {
         prompt: parsed.data.prompt,
         videoRatio: parsed.data.videoRatio,
         userId: session.user.id,
+        organizationId: session.user.organizationId,
       },
     });
 

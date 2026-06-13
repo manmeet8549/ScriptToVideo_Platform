@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       zernioAccountId: accountId,
       accessToken: encrypt(accountId), // encrypt to maintain schema decryption compatibility
       isDefault,
+      organizationId: session.user.organizationId,
     };
 
     if (existing) {

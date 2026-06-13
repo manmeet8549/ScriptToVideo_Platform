@@ -3,10 +3,11 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  BarChart3, Users, Video, FileText, Link2, 
-  HardDrive, Coins, History, Download, ArrowLeft
+  LayoutDashboard, Users, Video, FolderClosed, Film, 
+  Calendar, Coins, BarChart3, KeyRound, Settings, LogOut
 } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
+import { signOut } from 'next-auth/react';
 
 export default function AdminLayout({
   children,
@@ -16,22 +17,23 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/editors', label: 'Editors', icon: Video },
-    { href: '/admin/assignments', label: 'Assignments', icon: FileText },
-    { href: '/admin/connections', label: 'Connections', icon: Link2 },
-    { href: '/admin/storage', label: 'Storage', icon: HardDrive },
-    { href: '/admin/credits', label: 'Credits', icon: Coins },
-    { href: '/admin/activity', label: 'Activity Log', icon: History },
-    { href: '/admin/reports', label: 'Reports Export', icon: Download },
+    { href: '/admin/projects', label: 'Projects', icon: FolderClosed },
+    { href: '/admin/video-library', label: 'Video Library', icon: Film },
+    { href: '/admin/publishing', label: 'Publishing', icon: Calendar },
+    { href: '/admin/credits', label: 'Credits & Usage', icon: Coins },
+    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/admin/api-keys', label: 'API Keys', icon: KeyRound },
+    { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
   return (
     <div className="flex min-h-screen bg-[#fcfcfc] text-black">
       {/* Admin Sidebar */}
       <aside className="w-64 border-r border-gray-100 bg-white flex flex-col justify-between h-screen sticky top-0 p-6 shrink-0 z-20">
-        <div className="space-y-8 overflow-y-auto pr-1">
+        <div className="space-y-8 overflow-y-auto pr-1 flex-1">
           {/* Logo */}
           <div className="flex items-center gap-2">
             <ThinkNextLogo variant="compact" size="xs" />
@@ -64,15 +66,15 @@ export default function AdminLayout({
           </nav>
         </div>
 
-        {/* Back to App button */}
+        {/* Logout button */}
         <div className="pt-4 border-t border-gray-100">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-black transition-colors px-4 py-2 hover:bg-neutral-50 rounded-xl"
+          <button
+            onClick={() => signOut({ callbackUrl: '/' })}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-gray-500 hover:text-red-600 hover:bg-red-50/50 rounded-xl transition-all duration-200 text-left"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to App
-          </Link>
+            <LogOut className="h-4 w-4 shrink-0" />
+            Sign Out
+          </button>
         </div>
       </aside>
 

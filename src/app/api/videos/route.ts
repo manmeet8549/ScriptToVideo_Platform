@@ -33,9 +33,16 @@ export async function GET() {
     // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL
     await backfillUserVideos(session.user.id);
 
-    // Fetch all completed videos for the user
+    const whereClause: any = {};
+    if (session.user.organizationId) {
+      whereClause.organizationId = session.user.organizationId;
+    } else {
+      whereClause.userId = session.user.id;
+    }
+
+    // Fetch all completed videos for the organization/user
     const videos = await db.video.findMany({
-      where: { userId: session.user.id },
+      where: whereClause,
       include: {
         project: {
           select: {

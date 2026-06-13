@@ -17,9 +17,16 @@ export async function ensureCreditWallet(userId: string) {
   // Calculate existing storage usage to make sure wallet starts with correct state
   const initialStorage = await calculateStorageUsedRaw(userId);
 
+  // Fetch the user's organization ID
+  const userObj = await db.user.findUnique({
+    where: { id: userId },
+    select: { organizationId: true },
+  });
+
   return await db.creditWallet.create({
     data: {
       userId,
+      organizationId: userObj?.organizationId || null,
       scriptCredits: 10,
       voiceCredits: 10,
       videoCredits: 5,

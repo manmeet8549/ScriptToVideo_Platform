@@ -53,14 +53,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient Credits. Contact Administrator.' }, { status: 403 });
     }
 
-    // 2. Retrieve & decrypt the NVIDIA NIM API key
-    const providerKey = await db.providerKey.findUnique({
-      where: { userId_provider: { userId: session.user.id, provider: 'NVIDIA' } },
-    });
+    // 2. Retrieve & decrypt the NVIDIA NIM API key (check organization first, then user)
+    let providerKey = null;
+    if (session.user.organizationId) {
+      providerKey = await db.providerKey.findUnique({
+        where: {
+          organizationId_provider: {
+            organizationId: session.user.organizationId,
+            provider: 'NVIDIA',
+          },
+        },
+      });
+    }
+    if (!providerKey) {
+      providerKey = await db.providerKey.findUnique({
+        where: {
+          userId_provider: {
+            userId: session.user.id,
+            provider: 'NVIDIA',
+          },
+        },
+      });
+    }
 
     if (!providerKey) {
       return NextResponse.json(
-        { error: 'NVIDIA NIM API key not configured. Please add it in API Keys settings.' },
+        { error: 'NVIDIA NIM API key not configured. Please add it in API Keys or Org settings.' },
         { status: 400 }
       );
     }

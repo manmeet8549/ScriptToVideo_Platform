@@ -161,6 +161,7 @@ export async function GET(
           isDefault,
           channelId,
           subscriberCount,
+          organizationId: session.user.organizationId,
         },
       });
     }

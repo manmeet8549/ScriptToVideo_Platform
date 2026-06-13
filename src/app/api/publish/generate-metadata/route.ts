@@ -23,10 +23,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // Try to load NVIDIA NIM API key
-    const providerKey = await db.providerKey.findUnique({
-      where: { userId_provider: { userId: session.user.id, provider: 'NVIDIA' } },
-    });
+    // Try to load NVIDIA NIM API key (check organization first, then user)
+    let providerKey = null;
+    if (session.user.organizationId) {
+      providerKey = await db.providerKey.findUnique({
+        where: {
+          organizationId_provider: {
+            organizationId: session.user.organizationId,
+            provider: 'NVIDIA',
+          },
+        },
+      });
+    }
+    if (!providerKey) {
+      providerKey = await db.providerKey.findUnique({
+        where: {
+          userId_provider: {
+            userId: session.user.id,
+            provider: 'NVIDIA',
+          },
+        },
+      });
+    }
 
     let nvidiaKey = '';
     if (providerKey) {

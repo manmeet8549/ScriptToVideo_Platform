@@ -39,11 +39,15 @@ export async function POST(request: NextRequest) {
 
     // 1.5 Fetch and validate accounts and verify environment variables for YouTube
     const accountIds = targets.map((t: { socialAccountId: string }) => t.socialAccountId);
+    const whereClause: any = { id: { in: accountIds } };
+    if (session.user.organizationId) {
+      whereClause.organizationId = session.user.organizationId;
+    } else {
+      whereClause.userId = userId;
+    }
+
     const targetAccounts = await db.socialAccount.findMany({
-      where: {
-        id: { in: accountIds },
-        userId,
-      },
+      where: whereClause,
     });
 
     const hasYouTubeTarget = targetAccounts.some((a) => a.platform === 'youtube');

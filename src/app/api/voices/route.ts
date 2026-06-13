@@ -18,14 +18,32 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Retrieve stored ElevenLabs key
-  const providerKey = await db.providerKey.findUnique({
-    where: { userId_provider: { userId: session.user.id, provider: 'ELEVENLABS' } },
-  });
+  // Retrieve stored ElevenLabs key (check organization first, then user)
+  let providerKey = null;
+  if (session.user.organizationId) {
+    providerKey = await db.providerKey.findUnique({
+      where: {
+        organizationId_provider: {
+          organizationId: session.user.organizationId,
+          provider: 'ELEVENLABS',
+        },
+      },
+    });
+  }
+  if (!providerKey) {
+    providerKey = await db.providerKey.findUnique({
+      where: {
+        userId_provider: {
+          userId: session.user.id,
+          provider: 'ELEVENLABS',
+        },
+      },
+    });
+  }
 
   if (!providerKey) {
     return NextResponse.json(
-      { error: 'ElevenLabs API key not configured. Please add it in API Keys settings.' },
+      { error: 'ElevenLabs API key not configured. Please add it in API Keys or Org settings.' },
       { status: 400 }
     );
   }

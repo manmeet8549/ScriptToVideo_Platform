@@ -17,9 +17,16 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
+    const whereClause: any = { id };
+    if (session.user.organizationId) {
+      whereClause.organizationId = session.user.organizationId;
+    } else {
+      whereClause.userId = session.user.id;
+    }
+
     // 1. Verify existence and ownership
     const video = await db.video.findFirst({
-      where: { id, userId: session.user.id },
+      where: whereClause,
     });
 
     if (!video) {

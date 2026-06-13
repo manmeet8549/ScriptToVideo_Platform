@@ -2,17 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Copy, Download, Mail, Check, AlertCircle } from 'lucide-react';
 
 interface UserItem {
   id: string;
   name: string | null;
   email: string;
+  phoneNumber: string | null;
   role: string;
   status: string;
   createdAt: string;
   lastLoginAt: string | null;
   projectsCount: number;
   videosCount: number;
+  credits: {
+    scriptCredits: number;
+    voiceCredits: number;
+    videoCredits: number;
+    publishCredits: number;
+  } | null;
 }
 
 export default function AdminUsersPage() {
@@ -21,9 +29,24 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('');
   
   // Create user form state
-  const [form, setForm] = useState({ fullName: '', email: '' });
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    accountStatus: 'ACTIVE',
+    scriptCredits: 10,
+    voiceCredits: 10,
+    videoCredits: 5,
+    publishCredits: 5,
+  });
+
   const [createLoading, setCreateLoading] = useState(false);
-  const [createResult, setCreateResult] = useState<{ email: string; temporaryPassword?: string } | null>(null);
+  const [createResult, setCreateResult] = useState<{
+    id: string;
+    email: string;
+    temporaryPassword: string;
+    role: string;
+  } | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -57,15 +80,37 @@ export default function AdminUsersPage() {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          fullName: form.fullName,
+          email: form.email,
+          phoneNumber: form.phoneNumber || undefined,
+          accountStatus: form.accountStatus,
+          creditAllocation: {
+            scriptCredits: Number(form.scriptCredits),
+            voiceCredits: Number(form.voiceCredits),
+            videoCredits: Number(form.videoCredits),
+            publishCredits: Number(form.publishCredits),
+          },
+        }),
       });
       const data = await res.json();
       if (res.ok) {
         setCreateResult({
+          id: data.user.id,
           email: data.user.email,
           temporaryPassword: data.user.temporaryPassword,
+          role: data.user.role,
         });
-        setForm({ fullName: '', email: '' });
+        setForm({
+          fullName: '',
+          email: '',
+          phoneNumber: '',
+          accountStatus: 'ACTIVE',
+          scriptCredits: 10,
+          voiceCredits: 10,
+          videoCredits: 5,
+          publishCredits: 5,
+        });
         fetchUsers();
       } else {
         setError(data.error || 'Failed to create user.');
@@ -104,7 +149,13 @@ export default function AdminUsersPage() {
 
       if (res.ok) {
         if (action === 'RESET') {
-          alert(`Temporary password generated: ${data.temporaryPassword}`);
+          // Format credentials for reset result
+          setCreateResult({
+            id,
+            email: data.email || 'N/A',
+            temporaryPassword: data.temporaryPassword,
+            role: 'USER',
+          });
         } else {
           fetchUsers();
         }
@@ -116,12 +167,41 @@ export default function AdminUsersPage() {
     }
   };
 
+  const getCredentialsText = () => {
+    if (!createResult) return '';
+    return `Platform Login Credentials
+-----------------------------------
+Role: User
+User ID: ${createResult.id}
+Email: ${createResult.email}
+Temporary Password: ${createResult.temporaryPassword}
+-----------------------------------
+Sign-In URL: ${window.location.origin}
+`;
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(getCredentialsText());
+    alert('Credentials copied to clipboard!');
+  };
+
+  const handleDownload = () => {
+    const text = getCredentialsText();
+    const element = document.createElement('a');
+    const file = new Blob([text], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = `credentials_user_${createResult?.email}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 font-sans">
       <div className="flex justify-between items-center border-b pb-4">
         <div>
           <h1 className="text-3xl font-extrabold text-black">User Management</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage platform users and roles.</p>
+          <p className="text-gray-500 text-sm mt-1">Manage platform users, allocate credits, and monitor status.</p>
         </div>
         <div className="flex gap-4">
           <Link href="/admin/connections" className="text-sm font-bold text-gray-600 hover:text-black">
@@ -137,58 +217,206 @@ export default function AdminUsersPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
-          {error}
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Create User Section */}
-      <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm space-y-4">
-        <h2 className="text-lg font-bold text-black">Create User</h2>
-        <form onSubmit={handleCreateUser} className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px] space-y-1">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Full Name</label>
-            <input
-              type="text"
-              required
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              placeholder="e.g. John Doe"
-              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
-            />
-          </div>
-          <div className="flex-1 min-w-[200px] space-y-1">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Email Address</label>
-            <input
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="e.g. john@example.com"
-              className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={createLoading}
-            className="bg-black text-white hover:bg-neutral-800 rounded-xl px-5 py-2.5 text-sm font-bold disabled:opacity-50"
-          >
-            {createLoading ? 'Creating...' : 'Create User'}
-          </button>
-        </form>
+      {/* Grid: Create Form on Left, Created Credentials on Right */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Create User Section */}
+        <div className="lg:col-span-2 p-6 bg-white border border-gray-100 rounded-3xl shadow-sm space-y-6">
+          <h2 className="text-xl font-bold text-black border-b pb-3">Create User Account</h2>
+          <form onSubmit={handleCreateUser} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={form.fullName}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  placeholder="e.g. John Doe"
+                  className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-black font-sans"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="e.g. john@example.com"
+                  className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-black font-sans"
+                />
+              </div>
+            </div>
 
-        {createResult && (
-          <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm space-y-1">
-            <p className="font-bold">User created successfully!</p>
-            <p>Email: <span className="font-semibold">{createResult.email}</span></p>
-            <p>Temporary Password: <span className="font-mono bg-white px-2 py-0.5 rounded border font-bold text-black select-all">{createResult.temporaryPassword}</span></p>
-            <p className="text-xs text-amber-600">Please share this temporary password with the user. They will be forced to change it on their next login.</p>
-          </div>
-        )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Phone Number (Optional)</label>
+                <input
+                  type="tel"
+                  value={form.phoneNumber}
+                  onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
+                  placeholder="e.g. +1 (555) 000-0000"
+                  className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-black font-sans"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Account Status</label>
+                <select
+                  value={form.accountStatus}
+                  onChange={(e) => setForm({ ...form, accountStatus: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-black bg-white font-sans"
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="PAUSED">Paused</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Credits Allocation Section */}
+            <div className="space-y-3 pt-3 border-t">
+              <h3 className="text-sm font-bold text-black uppercase tracking-wider">Credits Allocation</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-400">Script Credits</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={form.scriptCredits}
+                    onChange={(e) => setForm({ ...form, scriptCredits: Number(e.target.value) })}
+                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-400">Voice Credits</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={form.voiceCredits}
+                    onChange={(e) => setForm({ ...form, voiceCredits: Number(e.target.value) })}
+                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-400">Video Credits</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={form.videoCredits}
+                    onChange={(e) => setForm({ ...form, videoCredits: Number(e.target.value) })}
+                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-400">Publish Credits</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={form.publishCredits}
+                    onChange={(e) => setForm({ ...form, publishCredits: Number(e.target.value) })}
+                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={createLoading}
+              className="w-full bg-black text-white hover:bg-neutral-800 rounded-xl py-3 text-sm font-bold disabled:opacity-50 transition-colors"
+            >
+              {createLoading ? 'Creating User...' : 'Create User Account'}
+            </button>
+          </form>
+        </div>
+
+        {/* Credentials Display Pane */}
+        <div className="lg:col-span-1">
+          {createResult ? (
+            <div className="p-6 bg-neutral-900 border border-neutral-800 text-white rounded-3xl shadow-xl space-y-6 animate-in fade-in zoom-in duration-300 relative overflow-hidden">
+              {/* Background Glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl" />
+
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <Check className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-neutral-100">Account Created Successfully</h3>
+                  <p className="text-[11px] text-neutral-400">Provide the details below to the user.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2 text-xs">
+                <div className="flex justify-between border-b border-neutral-800 pb-2">
+                  <span className="text-neutral-400 font-medium">Role:</span>
+                  <span className="font-bold text-emerald-400">User</span>
+                </div>
+                <div className="flex justify-between border-b border-neutral-800 pb-2">
+                  <span className="text-neutral-400 font-medium">User ID:</span>
+                  <span className="font-mono font-bold text-neutral-100 select-all">{createResult.id}</span>
+                </div>
+                <div className="flex justify-between border-b border-neutral-800 pb-2">
+                  <span className="text-neutral-400 font-medium">Email:</span>
+                  <span className="font-bold text-neutral-100 select-all">{createResult.email}</span>
+                </div>
+                <div className="flex flex-col gap-1 border-b border-neutral-800 pb-2">
+                  <span className="text-neutral-400 font-medium">Temporary Password:</span>
+                  <span className="font-mono bg-neutral-950 border border-neutral-800 px-2.5 py-1.5 rounded-lg font-bold text-emerald-400 text-[13px] text-center select-all block mt-1 tracking-wider">
+                    {createResult.temporaryPassword}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl py-2.5 text-xs font-bold transition-all border border-neutral-750"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl py-2.5 text-xs font-bold transition-all border border-neutral-750"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </button>
+              </div>
+
+              <button
+                disabled
+                className="w-full flex items-center justify-center gap-2 bg-neutral-800/40 text-neutral-500 border border-neutral-800/60 rounded-xl py-2.5 text-xs font-bold cursor-not-allowed"
+              >
+                <Mail className="h-3.5 w-3.5 text-neutral-600" />
+                Send Via Email (Future Feature)
+              </button>
+            </div>
+          ) : (
+            <div className="p-6 border border-dashed border-gray-200 rounded-3xl h-full flex flex-col items-center justify-center text-center text-gray-400 p-8">
+              <AlertCircle className="h-8 w-8 mb-2.5 text-gray-300" />
+              <p className="text-sm font-semibold text-gray-500">No Credentials Displayed</p>
+              <p className="text-xs text-gray-400 max-w-[200px] mt-1 leading-relaxed">
+                Create a user account to generate temporary credentials.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-500 text-sm">Loading users...</div>
         ) : users.length === 0 ? (
@@ -199,8 +427,9 @@ export default function AdminUsersPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-gray-400 font-bold text-xs uppercase tracking-wider">
                   <th className="p-4">Name</th>
-                  <th className="p-4">Email</th>
+                  <th className="p-4">Email / Phone</th>
                   <th className="p-4">Status</th>
+                  <th className="p-4">Credits Allocation</th>
                   <th className="p-4">Projects</th>
                   <th className="p-4">Videos</th>
                   <th className="p-4 text-right">Actions</th>
@@ -214,18 +443,33 @@ export default function AdminUsersPage() {
                         {u.name || 'N/A'}
                       </Link>
                     </td>
-                    <td className="p-4 text-gray-500">{u.email}</td>
+                    <td className="p-4 space-y-0.5">
+                      <div className="text-gray-900 font-medium">{u.email}</div>
+                      {u.phoneNumber && <div className="text-xs text-gray-400">{u.phoneNumber}</div>}
+                    </td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        u.status === 'ACTIVE' ? 'bg-green-50 text-green-700' :
-                        u.status === 'PAUSED' ? 'bg-amber-50 text-amber-700' :
-                        'bg-red-50 text-red-700'
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                        u.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-200' :
+                        u.status === 'PAUSED' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        'bg-red-50 text-red-700 border border-red-200'
                       }`}>
                         {u.status}
                       </span>
                     </td>
-                    <td className="p-4 text-gray-500">{u.projectsCount}</td>
-                    <td className="p-4 text-gray-500">{u.videosCount}</td>
+                    <td className="p-4 text-xs font-medium text-gray-500">
+                      {u.credits ? (
+                        <div className="flex gap-3">
+                          <span>Script: <strong className="text-gray-700">{u.credits.scriptCredits}</strong></span>
+                          <span>Voice: <strong className="text-gray-700">{u.credits.voiceCredits}</strong></span>
+                          <span>Video: <strong className="text-gray-700">{u.credits.videoCredits}</strong></span>
+                          <span>Publish: <strong className="text-gray-700">{u.credits.publishCredits}</strong></span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">None</span>
+                      )}
+                    </td>
+                    <td className="p-4 text-gray-500 font-semibold">{u.projectsCount}</td>
+                    <td className="p-4 text-gray-500 font-semibold">{u.videosCount}</td>
                     <td className="p-4 text-right space-x-2">
                       {u.status === 'ACTIVE' ? (
                         <button onClick={() => handleAction(u.id, 'PAUSED')} className="text-amber-600 hover:underline text-xs font-bold">Pause</button>
