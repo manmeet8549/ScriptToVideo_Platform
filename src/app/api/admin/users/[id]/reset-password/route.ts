@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
@@ -14,7 +14,7 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await props.params;
 
   try {
     const existingUser = await db.user.findFirst({

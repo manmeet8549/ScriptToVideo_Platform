@@ -17,29 +17,23 @@ const updateProjectSchema = z.object({
   duration: z.string().optional(),
 });
 
-type RouteParams = { params: { id: string } };
-
 // GET /api/projects/:id
-export async function GET(_req: NextRequest, { params }: RouteParams) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL (skip for editors)
-    if (session.user.role !== 'EDITOR') {
-      try {
-        await backfillUserVideos(session.user.id);
-      } catch (err) {
-        console.error('[PROJECT_GET_DETAIL] Failed to backfill videos:', err);
-      }
-    }
-  } catch (err) {
-    console.error('[PROJECT_GET_DETAIL] Error checking/backfilling videos:', err);
+  const { id } = await props.params;
+
+  // Run the backfill audit pipeline asynchronously so we do not block the page load
+  if (session.user.role !== 'EDITOR') {
+    backfillUserVideos(session.user.id).catch((err) => {
+      console.error('[PROJECT_GET_DETAIL] Failed to backfill videos:', err);
+    });
   }
 
-  const whereClause: any = { id: params.id };
+  const whereClause: any = { id };
   const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
   if (isUserAdmin) {
     // Admin has full access
@@ -48,7 +42,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const assignment = await db.videoAssignment.findFirst({
       where: {
         editorId: session.user.id,
-        video: { projectId: params.id },
+        video: { projectId: id },
       },
     });
     if (!assignment) {
@@ -103,11 +97,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 }
 
 // PATCH /api/projects/:id
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const { id } = await props.params;
 
   try {
     const body = await request.json();
@@ -122,7 +118,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // Verify ownership (only ADMIN or the user creator can update/patch)
     const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
-    const whereClause: any = { id: params.id };
+    const whereClause: any = { id };
     if (!isUserAdmin) {
       whereClause.userId = session.user.id;
     }
@@ -135,7 +131,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const project = await db.project.update({
-      where: { id: params.id },
+      where: { id },
       data: parsed.data,
     });
 
@@ -147,15 +143,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/projects/:id
-export async function DELETE(_req: NextRequest, { params }: RouteParams) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { id } = await props.params;
+
   // Verify ownership (only ADMIN or the user creator can delete)
   const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
-  const whereClause: any = { id: params.id };
+  const whereClause: any = { id };
   if (!isUserAdmin) {
     whereClause.userId = session.user.id;
   }
@@ -167,7 +165,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  await db.project.delete({ where: { id: params.id } });
+  await db.project.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
 }

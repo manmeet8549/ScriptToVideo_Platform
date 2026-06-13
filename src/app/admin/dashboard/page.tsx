@@ -8,7 +8,11 @@ import {
   FileText, Mic, Globe
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import DashboardCalendarWidget from '@/components/DashboardCalendarWidget';
+import dynamic from 'next/dynamic';
+const DashboardCalendarWidget = dynamic(() => import('@/components/DashboardCalendarWidget'), {
+  ssr: false,
+  loading: () => <div className="h-96 bg-white border border-gray-100 rounded-[32px] animate-pulse" />
+});
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);

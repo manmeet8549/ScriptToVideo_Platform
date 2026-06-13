@@ -5,7 +5,7 @@ import { useAppStore } from '@/store/store';
 import AuthScreen from '@/components/AuthScreen';
 
 export default function SignupPage() {
-  const { setAuthView } = useAppStore();
+  const setAuthView = useAppStore((state) => state.setAuthView);
 
   useEffect(() => {
     setAuthView('signup');

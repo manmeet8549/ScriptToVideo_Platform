@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useAppStore } from '@/store/store';
 import { useForm } from 'react-hook-form';
@@ -35,7 +36,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function AuthScreen() {
-  const { authView, setAuthView } = useAppStore();
+  const authView = useAppStore((state) => state.authView);
+  const setAuthView = useAppStore((state) => state.setAuthView);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [branding, setBranding] = useState<any>(null);
@@ -234,8 +236,7 @@ export default function AuthScreen() {
                 className="mt-16 md:mt-24 hover:opacity-85 transition-opacity self-start text-left cursor-pointer"
               >
                 {branding?.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={branding.logo} alt={branding.name} className="h-10 object-contain" />
+                  <Image src={branding.logo} alt={branding.name} className="h-10 object-contain" width={160} height={40} unoptimized />
                 ) : (
                   <ThinkNextLogo variant="full" size="sm" />
                 )}
@@ -396,8 +397,7 @@ export default function AuthScreen() {
                   className="flex items-center gap-2 mb-16 hover:opacity-85 transition-opacity self-start text-left cursor-pointer"
                 >
                   {branding?.logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={branding.logo} alt={branding.name} className="h-10 object-contain" />
+                    <Image src={branding.logo} alt={branding.name} className="h-10 object-contain" width={160} height={40} unoptimized />
                   ) : (
                     <ThinkNextLogo variant="full" size="sm" />
                   )}

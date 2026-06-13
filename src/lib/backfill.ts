@@ -3,11 +3,18 @@ import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 import { uploadToR2, generateSignedUrl } from '@/lib/r2';
 
+const activeBackfills = new Set<string>();
+
 /**
  * Audit and backfill completed or generating HeyGen videos to Cloudflare R2 and PostgreSQL.
  * This runs automatically for the given user ID to repair/recover any missing video records.
  */
 export async function backfillUserVideos(userId: string): Promise<void> {
+  if (activeBackfills.has(userId)) {
+    console.log(`[BACKFILL] Already auditing for user: ${userId}. Skipping duplicate execution.`);
+    return;
+  }
+  activeBackfills.add(userId);
   const timestamp = new Date().toISOString();
   console.log(`[BACKFILL][${timestamp}] Starting R2 backfill audit for user: ${userId}`);
 
@@ -374,5 +381,7 @@ export async function backfillUserVideos(userId: string): Promise<void> {
     }
   } catch (err) {
     console.error(`[BACKFILL][${timestamp}] Error during backfill audit process:`, err);
+  } finally {
+    activeBackfills.delete(userId);
   }
 }

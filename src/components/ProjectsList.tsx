@@ -23,7 +23,10 @@ import {
 } from 'lucide-react';
 
 export default function ProjectsList() {
-  const { searchQuery, setSearchQuery, setAuthView, setIsCreateModalOpen } = useAppStore();
+  const searchQuery = useAppStore((state) => state.searchQuery);
+  const setSearchQuery = useAppStore((state) => state.setSearchQuery);
+  const setAuthView = useAppStore((state) => state.setAuthView);
+  const setIsCreateModalOpen = useAppStore((state) => state.setIsCreateModalOpen);
   const { data: session } = useSession();
   const user = session?.user;
   const router = useRouter();

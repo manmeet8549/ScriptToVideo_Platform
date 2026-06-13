@@ -38,7 +38,9 @@ const pipelineSteps = [
 ];
 
 export default function HeroSection() {
-  const { setIsCreateModalOpen, setActiveTab, setAuthView } = useAppStore();
+  const setIsCreateModalOpen = useAppStore((state) => state.setIsCreateModalOpen);
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const setAuthView = useAppStore((state) => state.setAuthView);
   const { data: session } = useSession();
   const user = session?.user;
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);

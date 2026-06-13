@@ -9,6 +9,7 @@ import {
   Monitor, Sun, Moon, Camera
 } from 'lucide-react';
 import { useUserSettings, useSaveUserSettings } from '@/hooks/useUserSettings';
+import Image from 'next/image';
 
 export default function SettingsSection() {
   const { data: userData, isLoading, refetch } = useUserSettings();
@@ -151,11 +152,13 @@ export default function SettingsSection() {
               {/* Profile Image & Preset Options Column */}
               <div className="flex flex-col items-center gap-3 shrink-0 w-full sm:w-auto">
                 <div className="relative group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={form.avatarUrl || '/avatars/male.svg'}
                     alt="Profile Avatar"
-                    className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md transition-opacity duration-300 group-hover:opacity-85 animate-fade-in"
+                    width={96}
+                    height={96}
+                    unoptimized
+                    className="rounded-full border-4 border-white object-cover shadow-md transition-opacity duration-300 group-hover:opacity-85 animate-fade-in"
                   />
                   
                   {/* Hidden File Input */}
@@ -193,11 +196,12 @@ export default function SettingsSection() {
                       }`}
                       title="Select Male Preset"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src="/avatars/male.svg"
                         alt="Male Preset"
-                        className="h-full w-full rounded-full object-cover"
+                        width={36}
+                        height={36}
+                        className="rounded-full object-cover"
                       />
                     </button>
                     <button
@@ -210,11 +214,12 @@ export default function SettingsSection() {
                       }`}
                       title="Select Female Preset"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src="/avatars/female.svg"
                         alt="Female Preset"
-                        className="h-full w-full rounded-full object-cover"
+                        width={36}
+                        height={36}
+                        className="rounded-full object-cover"
                       />
                     </button>
                   </div>

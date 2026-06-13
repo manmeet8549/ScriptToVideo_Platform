@@ -132,6 +132,9 @@ model Project {
 
   organizationId    String?
   organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([organizationId])
 }
 
 model Script {
@@ -178,6 +181,9 @@ model GenerationHistory {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([projectId])
 }
 
 model ApiKey {
@@ -311,6 +317,10 @@ model Video {
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([organizationId])
 }
 
 model SocialAccount {
@@ -337,6 +347,8 @@ model SocialAccount {
 
   organizationId  String?
   organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 model PublishedVideo {
@@ -362,6 +374,8 @@ model PublishedVideo {
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 model EditorProfile {
@@ -406,6 +420,9 @@ model Notification {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId])
 }
 
 model ActivityLog {
@@ -417,6 +434,9 @@ model ActivityLog {
   action       String
   metadata     Json?
   createdAt    DateTime @default(now())
+
+  @@index([actorId])
+  @@index([createdAt])
 }
 
 model VideoAssignment {
@@ -437,6 +457,9 @@ model VideoAssignment {
   user   User          @relation("UserAssignments", fields: [userId], references: [id], onDelete: Cascade)
   editor User          @relation("EditorAssignments", fields: [editorId], references: [id], onDelete: Cascade)
   editedVideos EditedVideo[]
+
+  @@index([userId])
+  @@index([editorId])
 }
 
 model EditedVideo {
@@ -634,6 +657,8 @@ model ScheduledPost {
   socialAccount  SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
   campaignId     String?
   campaign       Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
 }
 
 model Campaign {
@@ -736,6 +761,9 @@ model CalendarEvent {
 
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([editorId])
 }
 
 enum CalendarEventType {

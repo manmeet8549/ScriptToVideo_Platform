@@ -1,6 +1,10 @@
 'use client';
 
-import CalendarModule from '@/components/CalendarModule';
+import dynamic from 'next/dynamic';
+const CalendarModule = dynamic(() => import('@/components/CalendarModule'), {
+  ssr: false,
+  loading: () => <div className="h-[600px] w-full bg-white border border-gray-100 rounded-3xl animate-pulse" />
+});
 
 export default function AdminCalendarPage() {
   return (

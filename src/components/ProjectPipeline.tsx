@@ -13,6 +13,7 @@ import {
   type ElevenLabsVoice,
 } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import {
   ArrowLeft, FileText, Volume2, Video, CheckCircle2,
   Loader2, Sparkles, Play, Pause, RefreshCw, Copy, Check,
@@ -223,7 +224,8 @@ export default function ProjectPipeline() {
     }
   }, [session, fetchUserCredits]);
 
-  const { selectedProjectId, setActiveTab } = useAppStore();
+  const selectedProjectId = useAppStore((state) => state.selectedProjectId);
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
   const queryClient = useQueryClient();
   const updateProject = useUpdateProject();
 
@@ -232,7 +234,8 @@ export default function ProjectPipeline() {
   );
 
   // Active step navigation (1 to 5) from Zustand store
-  const { activeStepIndex, setActiveStepIndex } = useAppStore();
+  const activeStepIndex = useAppStore((state) => state.activeStepIndex);
+  const setActiveStepIndex = useAppStore((state) => state.setActiveStepIndex);
 
   // Step state status map
   const [stepStatus, setStepStatus] = useState<Record<string, 'idle' | 'loading' | 'done' | 'error'>>({
@@ -1640,11 +1643,12 @@ export default function ProjectPipeline() {
                               <div className="flex items-center gap-3 rounded-2xl border-2 border-black bg-neutral-50 p-2.5 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                                 <div className="relative h-12 w-12 rounded-xl overflow-hidden border border-gray-150 shrink-0 bg-white">
                                   {customAvatar.preview_image_url ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
+                                    <Image
                                       src={customAvatar.preview_image_url}
                                       alt={customAvatar.avatar_name}
-                                      className="w-full h-full object-cover"
+                                      fill
+                                      unoptimized
+                                      className="object-cover"
                                     />
                                   ) : (
                                     <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -1704,11 +1708,12 @@ export default function ProjectPipeline() {
                                   } ${customAvatarId.trim() && customAvatar ? 'opacity-40 hover:opacity-75' : ''}`}
                                 >
                                   {a.preview_image_url ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
+                                    <Image
                                       src={a.preview_image_url}
                                       alt={a.avatar_name}
-                                      className="w-full h-full object-cover"
+                                      fill
+                                      unoptimized
+                                      className="object-cover"
                                     />
                                   ) : (
                                     <div className="w-full h-full bg-gray-100 flex items-center justify-center">

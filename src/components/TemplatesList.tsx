@@ -15,7 +15,9 @@ import {
 export default function TemplatesList() {
   const { data: session } = useSession();
   const user = session?.user;
-  const { setIsCreateModalOpen, setPrefilledProjectData, setAuthView } = useAppStore();
+  const setIsCreateModalOpen = useAppStore((state) => state.setIsCreateModalOpen);
+  const setPrefilledProjectData = useAppStore((state) => state.setPrefilledProjectData);
+  const setAuthView = useAppStore((state) => state.setAuthView);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'ALL' | string>('ALL');
 

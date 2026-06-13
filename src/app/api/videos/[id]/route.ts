@@ -3,15 +3,13 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { deleteFromR2 } from '@/lib/r2';
 
-type RouteParams = { params: { id: string } };
-
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await props.params;
   if (!id) {
     return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
   }

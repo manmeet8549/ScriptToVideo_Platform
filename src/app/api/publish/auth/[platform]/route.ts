@@ -3,14 +3,14 @@ import { auth } from '@/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  props: { params: Promise<{ platform: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { platform } = params;
+  const { platform } = await props.params;
   const platformLower = platform.toLowerCase();
 
   // For YouTube (Real Google OAuth 2.0 flow)

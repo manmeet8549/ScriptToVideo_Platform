@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
@@ -12,7 +12,7 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await props.params;
 
   try {
     const editor = await db.user.findFirst({

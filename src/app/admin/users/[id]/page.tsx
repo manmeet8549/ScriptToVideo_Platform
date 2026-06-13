@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface UserDetails {
@@ -36,7 +36,8 @@ interface UserDetails {
   storageUsageBytes: number;
 }
 
-export default function UserDetailPage({ params }: { params: { id: string } }) {
+export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [details, setDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,7 +46,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
     const fetchDetails = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/admin/users/${params.id}`);
+        const res = await fetch(`/api/admin/users/${id}`);
         const data = await res.json();
         if (res.ok) {
           setDetails(data);
@@ -60,7 +61,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
     };
 
     fetchDetails();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return <div className="p-12 text-center text-gray-500 font-sans">Loading user details...</div>;

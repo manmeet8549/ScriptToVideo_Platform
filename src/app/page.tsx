@@ -34,7 +34,7 @@ function LoadingScreen() {
 }
 
 function GuestLandingPage() {
-  const { authView } = useAppStore();
+  const authView = useAppStore((state) => state.authView);
 
   if (authView !== null) {
     return <AuthScreen />;
@@ -56,7 +56,7 @@ function GuestLandingPage() {
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const { authView } = useAppStore();
+  const authView = useAppStore((state) => state.authView);
   const router = useRouter();
 
   useEffect(() => {

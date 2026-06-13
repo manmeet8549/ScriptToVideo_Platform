@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -764,9 +765,8 @@ export default function OrgSettingsSection() {
                         className="rounded-xl border-neutral-200 h-11 text-sm flex-1 focus:border-black focus:ring-black"
                       />
                       {orgForm.logo && (
-                        <div className="h-11 w-11 border rounded-xl flex items-center justify-center p-1 bg-white">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={orgForm.logo} alt="Preview" className="max-h-full max-w-full object-contain" />
+                        <div className="h-11 w-11 border rounded-xl flex items-center justify-center p-1 bg-white relative">
+                          <Image src={orgForm.logo} alt="Preview" className="max-h-full max-w-full object-contain" fill unoptimized />
                         </div>
                       )}
                     </div>

@@ -5,14 +5,14 @@ import { validateZernioConfig } from '@/lib/env';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  props: { params: Promise<{ platform: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { platform } = params;
+  const { platform } = await props.params;
   if (!platform) {
     return NextResponse.json({ error: 'Platform parameter is required' }, { status: 400 });
   }

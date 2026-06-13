@@ -3,9 +3,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { logActivity } from '@/lib/admin';
 
-type RouteParams = { params: { id: string } };
-
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,7 +14,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await props.params;
   if (!id) {
     return NextResponse.json({ error: 'Assignment ID is required.' }, { status: 400 });
   }

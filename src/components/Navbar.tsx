@@ -8,7 +8,10 @@ import ThinkNextLogo from '@/components/ThinkNextLogo';
 import Link from 'next/link';
 
 export default function Navbar() {
-  const { activeTab, setActiveTab, setIsCreateModalOpen, setAuthView } = useAppStore();
+  const activeTab = useAppStore((state) => state.activeTab);
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const setIsCreateModalOpen = useAppStore((state) => state.setIsCreateModalOpen);
+  const setAuthView = useAppStore((state) => state.setAuthView);
   const { data: session } = useSession();
   const user = session?.user;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);

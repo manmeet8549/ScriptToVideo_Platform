@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -120,7 +121,7 @@ export default function ApprovalQueueSection() {
                 {/* Video Preview Block */}
                 <div className="h-40 rounded-2xl bg-neutral-100 overflow-hidden relative border flex items-center justify-center">
                   {req.video.thumbnailUrl ? (
-                    <img src={req.video.thumbnailUrl} className="object-cover h-full w-full" alt="" />
+                    <Image src={req.video.thumbnailUrl} className="object-cover h-full w-full" alt="Video thumbnail" fill unoptimized />
                   ) : (
                     <Video className="h-8 w-8 text-neutral-400" />
                   )}

@@ -35,7 +35,11 @@ const createProjectSchema = z.object({
 type FormData = z.infer<typeof createProjectSchema>;
 
 export default function CreateProjectModal() {
-  const { isCreateModalOpen, setIsCreateModalOpen, prefilledProjectData, setPrefilledProjectData, openProject } = useAppStore();
+  const isCreateModalOpen = useAppStore((state) => state.isCreateModalOpen);
+  const setIsCreateModalOpen = useAppStore((state) => state.setIsCreateModalOpen);
+  const prefilledProjectData = useAppStore((state) => state.prefilledProjectData);
+  const setPrefilledProjectData = useAppStore((state) => state.setPrefilledProjectData);
+  const openProject = useAppStore((state) => state.openProject);
   const createProject = useCreateProject();
   const router = useRouter();
   const pathname = usePathname();

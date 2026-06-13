@@ -116,14 +116,16 @@ export default auth(async (req) => {
     }
   }
 
-  // 5. Debug Logging (Task 6)
-  const resolvedRole = user?.role || (isLoggedIn ? 'USER' : undefined);
-  console.log({
-    pathname: path,
-    role: resolvedRole,
-    isAuthenticated: isLoggedIn,
-    targetRoute: targetRoute
-  });
+  // 5. Debug Logging (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    const resolvedRole = user?.role || (isLoggedIn ? 'USER' : undefined);
+    console.log({
+      pathname: path,
+      role: resolvedRole,
+      isAuthenticated: isLoggedIn,
+      targetRoute: targetRoute
+    });
+  }
 
   // 6. Execute Redirection or Next request
   if (targetRoute) {

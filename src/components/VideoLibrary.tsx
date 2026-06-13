@@ -350,7 +350,7 @@ function VideoCard({
 }
 
 export default function VideoLibrary() {
-  const { setActiveTab } = useAppStore();
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');

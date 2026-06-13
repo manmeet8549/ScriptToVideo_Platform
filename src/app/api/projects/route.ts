@@ -18,12 +18,10 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL
-    await backfillUserVideos(session.user.id);
-  } catch (err) {
+  // Run the backfill audit pipeline asynchronously so we do not block the page load
+  backfillUserVideos(session.user.id).catch((err) => {
     console.error('[PROJECTS_GET] Failed to backfill videos:', err);
-  }
+  });
 
   const whereClause: any = {};
   const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');

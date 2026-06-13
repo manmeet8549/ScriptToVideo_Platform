@@ -6,7 +6,7 @@ import ThinkNextLogo from '@/components/ThinkNextLogo';
 import Link from 'next/link';
 
 export default function Footer() {
-  const { setActiveTab } = useAppStore();
+  const setActiveTab = useAppStore((state) => state.setActiveTab);
   const { data: session } = useSession();
   const user = session?.user;
 

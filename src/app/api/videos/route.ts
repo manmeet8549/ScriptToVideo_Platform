@@ -30,9 +30,11 @@ export async function GET() {
   }
 
   try {
-    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL (skip for editors)
+    // Run the backfill audit pipeline asynchronously so we do not block the page load
     if (session.user.role !== 'EDITOR') {
-      await backfillUserVideos(session.user.id);
+      backfillUserVideos(session.user.id).catch((err) => {
+        console.error('[VIDEOS_GET] Failed to backfill videos:', err);
+      });
     }
 
     const whereClause: any = {};

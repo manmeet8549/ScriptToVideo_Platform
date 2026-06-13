@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 // PATCH: Approve, Reject, or Request Changes on an approval request
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -23,8 +23,7 @@ export async function PATCH(
   }
 
   try {
-    const resolvedParams = await params;
-    const { id } = resolvedParams;
+    const { id } = await props.params;
     const { status, feedback } = await request.json();
 
     if (!id || !status || !['APPROVED', 'REJECTED', 'CHANGES_REQUESTED'].includes(status)) {

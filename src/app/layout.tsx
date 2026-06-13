@@ -18,7 +18,7 @@ const geistMono = localFont({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const headersList = headers();
+  const headersList = await headers();
   const host = headersList.get("host") || "";
   const tenant = await getTenantContext(host);
 
@@ -46,7 +46,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headersList = headers();
+  const headersList = await headers();
   const host = headersList.get("host") || "";
   const tenant = await getTenantContext(host);
 

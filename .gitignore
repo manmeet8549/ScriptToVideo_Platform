@@ -38,4 +38,6 @@ next-env.d.ts
 # agents & local database
 graphify-out/
 .agents/
+.code-review-graph/
+archive/deprecated/
 

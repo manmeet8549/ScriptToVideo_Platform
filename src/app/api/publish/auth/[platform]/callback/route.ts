@@ -5,14 +5,14 @@ import { encrypt } from '@/lib/encryption';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  props: { params: Promise<{ platform: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const { platform } = params;
+  const { platform } = await props.params;
   const platformLower = platform.toLowerCase();
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');

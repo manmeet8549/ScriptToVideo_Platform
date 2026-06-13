@@ -1,7 +1,14 @@
 'use client';
 
-import EditorDashboard from '@/components/EditorDashboard';
-import DashboardCalendarWidget from '@/components/DashboardCalendarWidget';
+import dynamic from 'next/dynamic';
+const EditorDashboard = dynamic(() => import('@/components/EditorDashboard'), {
+  ssr: false,
+  loading: () => <div className="h-96 bg-white border border-gray-100 rounded-3xl animate-pulse" />
+});
+const DashboardCalendarWidget = dynamic(() => import('@/components/DashboardCalendarWidget'), {
+  ssr: false,
+  loading: () => <div className="h-96 bg-white border border-gray-100 rounded-[32px] animate-pulse" />
+});
 
 export default function EditorDashboardPage() {
   return (

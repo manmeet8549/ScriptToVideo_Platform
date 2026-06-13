@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 // GET: Fetch campaign details and analytics metrics
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -15,8 +15,7 @@ export async function GET(
   const orgId = session.user.organizationId;
 
   try {
-    const resolvedParams = await params;
-    const { id } = resolvedParams;
+    const { id } = await props.params;
 
     const campaign = await db.campaign.findFirst({
       where: orgId ? { id, organizationId: orgId } : { id },
@@ -76,7 +75,7 @@ export async function GET(
 // PATCH: Update campaign information (e.g. rename or edit description)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -86,8 +85,7 @@ export async function PATCH(
   const orgId = session.user.organizationId;
 
   try {
-    const resolvedParams = await params;
-    const { id } = resolvedParams;
+    const { id } = await props.params;
     const { name, description, videoIds } = await request.json();
 
     const campaign = await db.campaign.findFirst({

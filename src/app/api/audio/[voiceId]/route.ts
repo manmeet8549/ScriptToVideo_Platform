@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-type RouteParams = { params: { voiceId: string } };
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, props: { params: Promise<{ voiceId: string }> }) {
   try {
-    const { voiceId } = params;
+    const { voiceId } = await props.params;
 
     if (!voiceId) {
       return new NextResponse('Voice ID is required', { status: 400 });

@@ -10,14 +10,7 @@ export async function GET() {
 
   try {
     const [
-      totalUsers,
-      activeUsers,
-      pausedUsers,
-      stoppedUsers,
-      totalEditors,
-      activeEditors,
-      pausedEditors,
-      stoppedEditors,
+      userCounts,
       projectsCreated,
       activeProjects,
       videosGenerated,
@@ -25,14 +18,11 @@ export async function GET() {
       latestHistory,
       latestPublishing,
     ] = await Promise.all([
-      db.user.count({ where: { role: 'USER', deletedAt: null } }),
-      db.user.count({ where: { role: 'USER', accountStatus: 'ACTIVE', deletedAt: null } }),
-      db.user.count({ where: { role: 'USER', accountStatus: 'PAUSED', deletedAt: null } }),
-      db.user.count({ where: { role: 'USER', accountStatus: 'STOPPED', deletedAt: null } }),
-      db.user.count({ where: { role: 'EDITOR', deletedAt: null } }),
-      db.user.count({ where: { role: 'EDITOR', accountStatus: 'ACTIVE', deletedAt: null } }),
-      db.user.count({ where: { role: 'EDITOR', accountStatus: 'PAUSED', deletedAt: null } }),
-      db.user.count({ where: { role: 'EDITOR', accountStatus: 'STOPPED', deletedAt: null } }),
+      db.user.groupBy({
+        by: ['role', 'accountStatus'],
+        where: { deletedAt: null, role: { in: ['USER', 'EDITOR'] } },
+        _count: true,
+      }),
       db.project.count(),
       db.project.count({ where: { status: { in: ['SCRIPTING', 'VOICING', 'GENERATING'] } } }),
       db.video.count({ where: { status: 'COMPLETED' } }),
@@ -53,6 +43,31 @@ export async function GET() {
         },
       }),
     ]);
+
+    // Parse userCounts in memory
+    let totalUsers = 0;
+    let activeUsers = 0;
+    let pausedUsers = 0;
+    let stoppedUsers = 0;
+    let totalEditors = 0;
+    let activeEditors = 0;
+    let pausedEditors = 0;
+    let stoppedEditors = 0;
+
+    for (const uc of userCounts) {
+      const count = uc._count;
+      if (uc.role === 'USER') {
+        totalUsers += count;
+        if (uc.accountStatus === 'ACTIVE') activeUsers += count;
+        else if (uc.accountStatus === 'PAUSED') pausedUsers += count;
+        else if (uc.accountStatus === 'STOPPED') stoppedUsers += count;
+      } else if (uc.role === 'EDITOR') {
+        totalEditors += count;
+        if (uc.accountStatus === 'ACTIVE') activeEditors += count;
+        else if (uc.accountStatus === 'PAUSED') pausedEditors += count;
+        else if (uc.accountStatus === 'STOPPED') stoppedEditors += count;
+      }
+    }
 
     // Map history to standard queue format
     const historyJobs = latestHistory.map((g) => {
