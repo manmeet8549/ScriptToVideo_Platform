@@ -1,6 +1,7 @@
 'use client';
 
 import OrgSettingsSection from '@/components/OrgSettingsSection';
+import SecurityAccountSection from '@/components/SecurityAccountSection';
 
 export default function AdminSettingsPage() {
   return (
@@ -15,6 +16,9 @@ export default function AdminSettingsPage() {
       </div>
       <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xs">
         <OrgSettingsSection />
+      </div>
+      <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xs">
+        <SecurityAccountSection />
       </div>
     </div>
   );

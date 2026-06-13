@@ -247,7 +247,19 @@ export const generateApi = {
     }),
 
   /** Step 2: Generate voice audio from project script using ElevenLabs */
-  generateVoice: (data: { projectId: string; voiceId?: string; speed?: number; pitch?: number; emotion?: string }) =>
+  generateVoice: (data: { 
+    projectId: string; 
+    voiceId?: string; 
+    speed?: number; 
+    pitch?: number; 
+    emotion?: string; 
+    settings?: { 
+      stability: number; 
+      similarity_boost: number; 
+      style: number; 
+      use_speaker_boost: boolean; 
+    } 
+  }) =>
     apiFetch<GenerateVoiceResult>('/api/generate/voice', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -319,6 +331,9 @@ export interface ConnectionDetails {
   userId: string;
   editorId: string;
   editorKey: string;
+  connectionCode?: string;
+  workload?: number;
+  activeProjects?: number;
   status: 'ACTIVE' | 'DISCONNECTED' | 'BLOCKED';
   createdAt: string;
   connectedAt: string;
@@ -331,6 +346,7 @@ export interface ConnectionDetails {
       bio: string | null;
       skills: string[];
       availability: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
+      editorKey?: string | null;
     } | null;
   };
   user?: {

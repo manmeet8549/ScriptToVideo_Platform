@@ -188,12 +188,13 @@ export default function EditorsSection() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-neutral-50 text-neutral-400 font-bold text-xs uppercase tracking-wider">
-                      <th className="pb-3">Name</th>
-                      <th className="pb-3">Email</th>
+                    <tr className="border-b border-neutral-50 text-neutral-400 font-bold text-[10px] uppercase tracking-wider">
+                      <th className="pb-3 pl-1">Name</th>
+                      <th className="pb-3">Editor Key</th>
+                      <th className="pb-3">Connected Date</th>
+                      <th className="pb-3 text-center">Active Jobs</th>
                       <th className="pb-3">Availability</th>
-                      <th className="pb-3">Status</th>
-                      <th className="pb-3 text-right">Actions</th>
+                      <th className="pb-3 text-right pr-1">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -202,20 +203,45 @@ export default function EditorsSection() {
                       const profile = editor?.editorProfile;
                       const displayName = profile?.displayName || editor?.name || 'N/A';
                       const availability = profile?.availability || 'OFFLINE';
+                      const keyString = c.connectionCode || profile?.editorKey || 'N/A';
+                      const activeJobsCount = c.workload ?? 0;
 
                       return (
-                        <tr key={c.id} className="hover:bg-neutral-50/30">
-                          <td className="py-4.5 font-semibold text-black">
-                            <button
-                              onClick={() => setSelectedEditor(c)}
-                              className="hover:underline text-left inline-flex items-center gap-1"
-                            >
-                              {displayName}
-                              <ExternalLink className="h-3.5 w-3.5 text-neutral-400" />
-                            </button>
+                        <tr key={c.id} className="hover:bg-neutral-50/30 group">
+                          <td className="py-4 pl-1">
+                            <div>
+                              <button
+                                onClick={() => setSelectedEditor(c)}
+                                className="font-bold text-xs text-neutral-900 hover:underline text-left inline-flex items-center gap-1 leading-tight"
+                              >
+                                {displayName}
+                                <ExternalLink className="h-3.5 w-3.5 text-neutral-400" />
+                              </button>
+                              <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{editor?.email}</p>
+                            </div>
                           </td>
-                          <td className="py-4.5 text-neutral-500">{editor?.email}</td>
-                          <td className="py-4.5">
+                          <td className="py-4">
+                            <span className="font-mono text-[10px] font-bold text-neutral-600 bg-neutral-50 border border-neutral-200/50 px-2 py-0.5 rounded">
+                              {keyString}
+                            </span>
+                          </td>
+                          <td className="py-4 text-xs font-bold text-neutral-600">
+                            {new Date(c.connectedAt).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </td>
+                          <td className="py-4 text-center">
+                            <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              activeJobsCount > 0 
+                                ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+                                : 'bg-neutral-50 text-neutral-400 border border-neutral-100'
+                            }`}>
+                              {activeJobsCount} Active
+                            </span>
+                          </td>
+                          <td className="py-4">
                             <span className="inline-flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${
                                 availability === 'AVAILABLE' ? 'bg-green-500 animate-pulse' :
@@ -227,16 +253,7 @@ export default function EditorsSection() {
                               </span>
                             </span>
                           </td>
-                          <td className="py-4.5">
-                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              c.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-100' :
-                              c.status === 'BLOCKED' ? 'bg-red-50 text-red-700 border border-red-100' :
-                              'bg-neutral-100 text-neutral-500'
-                            }`}>
-                              {c.status === 'ACTIVE' ? 'Connected' : c.status}
-                            </span>
-                          </td>
-                          <td className="py-4.5 text-right">
+                          <td className="py-4 text-right pr-1">
                             {c.status === 'ACTIVE' && (
                               <button
                                 onClick={() => handleDisconnect(c.editorId)}

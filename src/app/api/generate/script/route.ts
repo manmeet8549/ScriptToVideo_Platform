@@ -53,41 +53,78 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient Credits. Contact Administrator.' }, { status: 403 });
     }
 
-    // 2. Retrieve & decrypt the NVIDIA NIM API key (check organization first, then user)
+    // 2. Retrieve & decrypt the API key (OpenAI with highest priority, fallback to NVIDIA)
+    let openaiKey: string | null = process.env.OPENAI_API_KEY || null;
     let providerKey = null;
-    if (session.user.organizationId) {
-      providerKey = await db.providerKey.findUnique({
-        where: {
-          organizationId_provider: {
-            organizationId: session.user.organizationId,
-            provider: 'NVIDIA',
+
+    if (!openaiKey) {
+      if (session.user.organizationId) {
+        providerKey = await db.providerKey.findUnique({
+          where: {
+            organizationId_provider: {
+              organizationId: session.user.organizationId,
+              provider: 'OPENAI',
+            },
           },
-        },
-      });
-    }
-    if (!providerKey) {
-      providerKey = await db.providerKey.findUnique({
-        where: {
-          userId_provider: {
-            userId: session.user.id,
-            provider: 'NVIDIA',
+        });
+      }
+      if (!providerKey) {
+        providerKey = await db.providerKey.findUnique({
+          where: {
+            userId_provider: {
+              userId: session.user.id,
+              provider: 'OPENAI',
+            },
           },
-        },
-      });
+        });
+      }
+      if (providerKey) {
+        try {
+          openaiKey = decrypt(providerKey.value);
+        } catch {
+          console.error('Failed to decrypt OpenAI API key');
+        }
+      }
     }
 
-    if (!providerKey) {
+    let nvidiaKey: string | null = process.env.NVIDIA_API_KEY || null;
+    let nimProviderKey = null;
+
+    if (!openaiKey && !nvidiaKey) {
+      if (session.user.organizationId) {
+        nimProviderKey = await db.providerKey.findUnique({
+          where: {
+            organizationId_provider: {
+              organizationId: session.user.organizationId,
+              provider: 'NVIDIA',
+            },
+          },
+        });
+      }
+      if (!nimProviderKey) {
+        nimProviderKey = await db.providerKey.findUnique({
+          where: {
+            userId_provider: {
+              userId: session.user.id,
+              provider: 'NVIDIA',
+            },
+          },
+        });
+      }
+      if (nimProviderKey) {
+        try {
+          nvidiaKey = decrypt(nimProviderKey.value);
+        } catch {
+          return NextResponse.json({ error: 'Failed to decrypt NVIDIA API key' }, { status: 500 });
+        }
+      }
+    }
+
+    if (!openaiKey && !nvidiaKey) {
       return NextResponse.json(
-        { error: 'NVIDIA NIM API key not configured. Please add it in API Keys or Org settings.' },
+        { error: 'No API provider keys (OpenAI or NVIDIA NIM) configured. Please add one in API Keys settings.' },
         { status: 400 }
       );
-    }
-
-    let nvidiaKey: string;
-    try {
-      nvidiaKey = decrypt(providerKey.value);
-    } catch {
-      return NextResponse.json({ error: 'Failed to decrypt NVIDIA API key' }, { status: 500 });
     }
 
     // 3. Mark project as generating
@@ -140,51 +177,98 @@ Hinglish Requirements:
       // Fallback to raw prompt
     }
 
-    // 4. Call NVIDIA NIM
-    const nimResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${nvidiaKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'meta/llama-3.1-70b-instruct',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPromptContent },
-        ],
-        max_tokens: 1024,
-        temperature: 0.75,
-        top_p: 0.95,
-      }),
-    });
+    let scriptText = '';
+    let tokensUsed = null;
+    let usedModel = '';
 
-    if (!nimResponse.ok) {
-      const errorBody = await nimResponse.json().catch(() => ({}));
-      // NVIDIA NIM returns errors as { detail: "..." } OR { error: { message: "..." } }
-      const errorMsg =
-        errorBody?.detail ||
-        errorBody?.error?.message ||
-        `NVIDIA NIM returned ${nimResponse.status} ${nimResponse.statusText}`;
-
-      // Mark failed
-      await db.generationHistory.update({
-        where: { id: historyEntry.id },
-        data: { status: 'FAILED', metadata: { error: errorMsg, prompt: project.prompt } },
-      });
-      await db.project.update({
-        where: { id: projectId },
-        data: { status: 'FAILED' },
+    if (openaiKey) {
+      // 4. Call OpenAI
+      const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: userPromptContent },
+          ],
+          max_tokens: 1024,
+          temperature: 0.75,
+        }),
       });
 
-      return NextResponse.json({ error: errorMsg }, { status: 502 });
+      if (!openAiRes.ok) {
+        const errorBody = await openAiRes.json().catch(() => ({}));
+        const errorMsg = errorBody?.error?.message || `OpenAI returned ${openAiRes.status} ${openAiRes.statusText}`;
+
+        // Mark failed
+        await db.generationHistory.update({
+          where: { id: historyEntry.id },
+          data: { status: 'FAILED', metadata: { error: errorMsg, prompt: project.prompt } },
+        });
+        await db.project.update({
+          where: { id: projectId },
+          data: { status: 'FAILED' },
+        });
+
+        return NextResponse.json({ error: errorMsg }, { status: 502 });
+      }
+
+      const openAiData = await openAiRes.json();
+      scriptText = openAiData.choices?.[0]?.message?.content ?? '';
+      tokensUsed = openAiData.usage?.total_tokens ?? null;
+      usedModel = openAiData.model ?? 'gpt-4o';
+    } else {
+      // 4. Call NVIDIA NIM
+      const nimResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${nvidiaKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'meta/llama-3.1-70b-instruct',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: userPromptContent },
+          ],
+          max_tokens: 1024,
+          temperature: 0.75,
+          top_p: 0.95,
+        }),
+      });
+
+      if (!nimResponse.ok) {
+        const errorBody = await nimResponse.json().catch(() => ({}));
+        const errorMsg =
+          errorBody?.detail ||
+          errorBody?.error?.message ||
+          `NVIDIA NIM returned ${nimResponse.status} ${nimResponse.statusText}`;
+
+        // Mark failed
+        await db.generationHistory.update({
+          where: { id: historyEntry.id },
+          data: { status: 'FAILED', metadata: { error: errorMsg, prompt: project.prompt } },
+        });
+        await db.project.update({
+          where: { id: projectId },
+          data: { status: 'FAILED' },
+        });
+
+        return NextResponse.json({ error: errorMsg }, { status: 502 });
+      }
+
+      const nimData = await nimResponse.json();
+      scriptText = nimData.choices?.[0]?.message?.content ?? '';
+      tokensUsed = nimData.usage?.total_tokens ?? null;
+      usedModel = nimData.model ?? 'meta/llama-3.1-70b-instruct';
     }
 
-    const nimData = await nimResponse.json();
-    const scriptText: string = nimData.choices?.[0]?.message?.content ?? '';
-
     if (!scriptText.trim()) {
-      return NextResponse.json({ error: 'NVIDIA NIM returned an empty script' }, { status: 502 });
+      return NextResponse.json({ error: 'LLM returned an empty script' }, { status: 502 });
     }
 
     // 5. Save the script + advance project state
@@ -210,8 +294,8 @@ Hinglish Requirements:
           status: 'COMPLETED',
           metadata: {
             prompt: project.prompt,
-            tokensUsed: nimData.usage?.total_tokens ?? null,
-            model: nimData.model ?? 'meta/llama-3.1-70b-instruct',
+            tokensUsed,
+            model: usedModel,
           },
         },
       }),

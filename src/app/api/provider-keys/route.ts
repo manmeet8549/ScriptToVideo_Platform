@@ -3,13 +3,13 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 
-const VALID_PROVIDERS = ['NVIDIA', 'ELEVENLABS', 'HEYGEN'];
+const VALID_PROVIDERS = ['OPENAI', 'NVIDIA', 'ELEVENLABS', 'HEYGEN', 'ZERNIO'];
 
 // GET /api/provider-keys - List connected status and details of user's provider keys (keys are masked)
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ORG_ADMIN')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -52,8 +52,8 @@ export async function GET() {
 // POST /api/provider-keys - Save, update, or remove a provider key
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ORG_ADMIN')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
       lastFour = trimmedKey.slice(-4);
     } else if (providerUpper === 'ELEVENLABS') {
       prefix = 'sk_';
+      lastFour = trimmedKey.slice(-4);
+    } else if (providerUpper === 'OPENAI') {
+      prefix = 'sk-proj-';
+      lastFour = trimmedKey.slice(-4);
+    } else if (providerUpper === 'ZERNIO') {
+      prefix = 'zr-';
       lastFour = trimmedKey.slice(-4);
     } else {
       prefix = trimmedKey.substring(0, Math.min(trimmedKey.length, 8));

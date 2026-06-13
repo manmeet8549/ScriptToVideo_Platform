@@ -3,12 +3,12 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 
-const VALID_PROVIDERS = ['NVIDIA', 'ELEVENLABS', 'HEYGEN'];
+const VALID_PROVIDERS = ['OPENAI', 'NVIDIA', 'ELEVENLABS', 'HEYGEN', 'ZERNIO'];
 
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ORG_ADMIN')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -54,7 +54,22 @@ export async function POST(request: NextRequest) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
-      if (providerUpper === 'NVIDIA') {
+      if (providerUpper === 'OPENAI') {
+        const res = await fetch('https://api.openai.com/v1/models', {
+          headers: {
+            'Authorization': `Bearer ${rawKey}`,
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          isValid = true;
+        } else {
+          const body = await res.json().catch(() => ({}));
+          errorMessage = body?.error?.message || `OpenAI responded with status ${res.status}`;
+        }
+      } else if (providerUpper === 'NVIDIA') {
         const res = await fetch('https://integrate.api.nvidia.com/v1/models', {
           headers: {
             'Authorization': `Bearer ${rawKey}`,
@@ -100,6 +115,17 @@ export async function POST(request: NextRequest) {
         } else {
           const body = await res.json().catch(() => ({}));
           errorMessage = body?.message || body?.error || `HeyGen responded with status ${res.status}`;
+        }
+      } else if (providerUpper === 'ZERNIO') {
+        const { Zernio } = await import('@zernio/node');
+        const client = new Zernio({ apiKey: rawKey });
+        const response = await client.profiles.listProfiles();
+        clearTimeout(timeoutId);
+
+        if (response.error) {
+          errorMessage = typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
+        } else {
+          isValid = true;
         }
       }
     } catch (fetchError) {

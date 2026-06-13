@@ -7,9 +7,10 @@ import { useAppStore } from '@/store/store';
 import { useProjects } from '@/hooks/useProjects';
 import { 
   FileText, Volume2, Video, Share2, ArrowRight, 
-  Coins, Plus, Loader2, Sparkles
+  Plus, Loader2, Sparkles
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import DashboardCalendarWidget from '@/components/DashboardCalendarWidget';
 
 export default function UserDashboardPage() {
   const { data: session } = useSession();
@@ -17,28 +18,7 @@ export default function UserDashboardPage() {
   const { setIsCreateModalOpen, openProject } = useAppStore();
   const { data: projects = [], isLoading: isProjectsLoading } = useProjects();
 
-  const [credits, setCredits] = useState<{
-    scriptCredits: number;
-    voiceCredits: number;
-    videoCredits: number;
-    publishCredits: number;
-    storageLimitGB: number;
-    storageUsedGB: number;
-  } | null>(null);
 
-  const fetchCredits = async () => {
-    try {
-      const res = await fetch('/api/user/credits');
-      const data = await res.json();
-      if (res.ok) setCredits(data.wallet);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchCredits();
-  }, []);
 
   const dashboardProjects = projects.slice(0, 4);
 
@@ -76,41 +56,9 @@ export default function UserDashboardPage() {
         </div>
       </div>
 
-      {/* Credit Meters & Action cards row */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Card: Quick credits summary */}
-        <div className="lg:col-span-4">
-          <Card className="rounded-3xl border border-gray-100 bg-white p-6 h-full shadow-xs flex flex-col justify-between">
-            <CardContent className="p-0 space-y-6">
-              <h3 className="font-bold text-lg text-black font-sans leading-tight">
-                Remaining Credits
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex flex-col">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Script Tokens</span>
-                  <span className="text-xl font-black text-black mt-1">{credits?.scriptCredits ?? 0}</span>
-                </div>
-                <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex flex-col">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Voice Tokens</span>
-                  <span className="text-xl font-black text-black mt-1">{credits?.voiceCredits ?? 0}</span>
-                </div>
-                <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex flex-col">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Video Renders</span>
-                  <span className="text-xl font-black text-black mt-1">{credits?.videoCredits ?? 0}</span>
-                </div>
-                <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex flex-col">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">Social Posts</span>
-                  <span className="text-xl font-black text-black mt-1">{credits?.publishCredits ?? 0}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Cards: Quick action panels */}
-        <div className="lg:col-span-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+      {/* Quick Action Panels */}
+      <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: Script */}
             <Card 
               onClick={() => setIsCreateModalOpen(true)}
@@ -176,7 +124,6 @@ export default function UserDashboardPage() {
                 </span>
               </CardContent>
             </Card>
-          </div>
         </div>
       </div>
 
@@ -276,6 +223,9 @@ export default function UserDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Calendar Widget */}
+      <DashboardCalendarWidget portal="user" />
     </div>
   );
 }

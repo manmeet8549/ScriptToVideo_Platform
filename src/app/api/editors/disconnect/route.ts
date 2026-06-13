@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     let connection;
 
     if (connectionId) {
-      connection = await db.editorConnection.findUnique({
+      connection = await db.editorUserConnection.findUnique({
         where: { id: connectionId },
         include: {
           user: { select: { id: true, name: true, email: true } },
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } else if (editorId) {
-      connection = await db.editorConnection.findUnique({
+      connection = await db.editorUserConnection.findUnique({
         where: {
           userId_editorId: {
             userId: session.user.id,
@@ -38,13 +38,32 @@ export async function POST(request: NextRequest) {
     }
 
     if (!connection) {
+      // Fallback: If disconnected from editor side, the active session user is connection.editorId
+      // Let's check if there is a connection where session.user.id is editorId and the other is userId
+      if (editorId) {
+        connection = await db.editorUserConnection.findUnique({
+          where: {
+            userId_editorId: {
+              userId: editorId, // the other user
+              editorId: session.user.id, // the active editor
+            },
+          },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            editor: { select: { id: true, name: true, email: true } },
+          },
+        });
+      }
+    }
+
+    if (!connection) {
       return NextResponse.json({ error: 'Connection not found.' }, { status: 404 });
     }
 
     // Check permissions: actor must be the user, the editor, or an admin
     const isUserOfConnection = connection.userId === session.user.id;
     const isEditorOfConnection = connection.editorId === session.user.id;
-    const isAdmin = session.user.role === 'ADMIN';
+    const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
 
     if (!isUserOfConnection && !isEditorOfConnection && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -59,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Disconnect connection
-    const updated = await db.editorConnection.update({
+    const updated = await db.editorUserConnection.update({
       where: { id: connection.id },
       data: {
         status: 'DISCONNECTED',

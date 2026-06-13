@@ -31,6 +31,7 @@ import { useAppStore } from '@/store/store';
 import { useProjects } from '@/hooks/useProjects';
 import { useSession, signOut } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FeaturesSection, HowItWorksSection, TestimonialsSection } from '@/components/GuestMarketing';
 
 import { 
   LayoutDashboard, FolderClosed, Copy, KeyRound, Settings, 
@@ -40,7 +41,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
-export default function Home() {
+function AuthenticatedLayout() {
   const { 
     activeTab, setActiveTab, 
     selectedProjectId, setSelectedProjectId,
@@ -1222,29 +1223,108 @@ export default function Home() {
     );
   }
 
-  // ─── PUBLIC LANDING PAGE LAYOUT ────────────────────────────────────────────
-  return (
-    <div className="flex flex-col min-h-screen">
-      {/* Global Navigation Header */}
-      <Navbar />
+  }
 
-      {/* Main Container */}
-      <main className="flex-1 bg-[#fcfcfc]">
-        {/* Figma-matched Hero Section */}
-        <HeroSection />
+  function GuestLandingPage() {
+    const { authView } = useAppStore();
 
-        {/* Action Pillars Grid */}
-        <ActionCards />
+    if (authView !== null) {
+      return <AuthScreen />;
+    }
 
-        {/* Projects tracker/history */}
-        <ProjectsList />
-      </main>
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <main className="flex-1 bg-[#fcfcfc]">
+          <HeroSection />
+          <FeaturesSection />
+          <HowItWorksSection />
+          <TestimonialsSection />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
-      {/* Global Modals */}
-      <CreateProjectModal />
+  export default function Home() {
+    const { data: session, status } = useSession();
 
-      {/* Footer Info */}
-      <Footer />
-    </div>
-  );
-}
+    if (status === 'loading') {
+      return (
+        <div className="flex min-h-screen bg-[#fcfcfc]">
+          {/* Sidebar skeleton - desktop only */}
+          <aside className="hidden lg:flex w-64 shrink-0 border-r border-gray-100 bg-white flex-col justify-between h-screen sticky top-0 p-6">
+            <div className="space-y-8">
+              {/* Logo placeholder */}
+              <div className="flex flex-col gap-2">
+                <div className="h-6 w-32 rounded bg-gray-100 animate-pulse" />
+                <div className="h-3.5 w-28 rounded bg-gray-100 animate-pulse" />
+                <div className="h-3 w-36 rounded bg-gray-100 animate-pulse" />
+              </div>
+              {/* Nav item placeholders */}
+              <div className="space-y-1.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <div key={n} className="h-10 rounded-2xl bg-gray-100 animate-pulse" />
+                ))}
+              </div>
+            </div>
+            {/* User row placeholder */}
+            <div className="pt-6 border-t border-gray-100 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-gray-100 animate-pulse shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <div className="h-3 w-24 rounded bg-gray-100 animate-pulse" />
+                <div className="h-2.5 w-32 rounded bg-gray-100 animate-pulse" />
+              </div>
+            </div>
+          </aside>
+          
+          {/* Main content pane with header skeleton */}
+          <div className="flex-grow flex flex-col min-h-screen w-full min-w-0">
+            {/* Mobile Header skeleton */}
+            <header className="lg:hidden sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-100 bg-white px-6 shrink-0">
+              <div className="h-6 w-6 rounded bg-gray-100 animate-pulse" />
+              <div className="h-8 w-24 rounded bg-gray-100 animate-pulse" />
+              <div className="h-8 w-8 rounded-full bg-gray-100 animate-pulse" />
+            </header>
+
+            <main className="flex-grow p-4 sm:p-6 lg:p-10 space-y-10 overflow-x-hidden">
+              {/* Header */}
+              <div className="space-y-4">
+                <div className="h-3 w-24 rounded-full bg-gray-100 animate-pulse" />
+                <div className="h-9 w-64 rounded bg-gray-100 animate-pulse" />
+                <div className="h-4 w-96 rounded bg-gray-100 animate-pulse" />
+                <div className="flex gap-3 pt-1">
+                  <div className="h-10 w-40 rounded-full bg-gray-100 animate-pulse" />
+                  <div className="h-10 w-36 rounded-full bg-gray-100 animate-pulse" />
+                </div>
+              </div>
+              {/* Cards grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-4 h-56 rounded-3xl bg-gray-100 animate-pulse" />
+                <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="h-56 rounded-3xl bg-gray-100 animate-pulse" />
+                  ))}
+                </div>
+              </div>
+              {/* Recent projects row */}
+              <div className="space-y-4">
+                <div className="h-5 w-40 rounded bg-gray-100 animate-pulse" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[1, 2, 3, 4].map((n) => (
+                    <div key={n} className="h-44 rounded-3xl bg-gray-100 animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    if (status === 'authenticated') {
+      return <AuthenticatedLayout />;
+    }
+
+    return <GuestLandingPage />;
+  }

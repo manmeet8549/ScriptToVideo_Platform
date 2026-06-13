@@ -11,7 +11,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
+  if (!isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -74,7 +75,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
 
       // Verify connection exists between this client (assignment.userId) and the new editor
-      const connection = await db.editorConnection.findUnique({
+      const connection = await db.editorUserConnection.findUnique({
         where: {
           userId_editorId: {
             userId: assignment.userId,

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
   LayoutDashboard, Users, Video, FolderClosed, Film, 
-  Calendar, Coins, BarChart3, KeyRound, Settings, LogOut
+  Calendar, BarChart3, KeyRound, Settings, LogOut, Share2
 } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
 import { signOut } from 'next-auth/react';
@@ -21,9 +21,9 @@ export default function AdminLayout({
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/editors', label: 'Editors', icon: Video },
     { href: '/admin/projects', label: 'Projects', icon: FolderClosed },
+    { href: '/admin/calendar', label: 'Calendar', icon: Calendar },
     { href: '/admin/video-library', label: 'Video Library', icon: Film },
-    { href: '/admin/publishing', label: 'Publishing', icon: Calendar },
-    { href: '/admin/credits', label: 'Credits & Usage', icon: Coins },
+    { href: '/admin/publishing', label: 'Publishing', icon: Share2 },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/admin/api-keys', label: 'API Keys', icon: KeyRound },
     { href: '/admin/settings', label: 'Settings', icon: Settings },

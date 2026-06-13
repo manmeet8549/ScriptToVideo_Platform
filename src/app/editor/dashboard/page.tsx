@@ -1,6 +1,7 @@
 'use client';
 
 import EditorDashboard from '@/components/EditorDashboard';
+import DashboardCalendarWidget from '@/components/DashboardCalendarWidget';
 
 export default function EditorDashboardPage() {
   return (
@@ -16,6 +17,8 @@ export default function EditorDashboardPage() {
       <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xs">
         <EditorDashboard />
       </div>
+      
+      <DashboardCalendarWidget portal="editor" />
     </div>
   );
 }

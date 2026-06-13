@@ -18,7 +18,8 @@ function convertToCSV(headers: string[], rows: (string | number | boolean | Date
 
 export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
+  if (!session?.user?.id || !isAdmin) {
     return new Response('Forbidden', { status: 403 });
   }
 

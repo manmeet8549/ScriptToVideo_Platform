@@ -1,10 +1,14 @@
 'use client';
 
 import { useAppStore } from '@/store/store';
+import { useSession } from 'next-auth/react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
+import Link from 'next/link';
 
 export default function Footer() {
   const { setActiveTab } = useAppStore();
+  const { data: session } = useSession();
+  const user = session?.user;
 
   return (
     <footer className="w-full border-t border-gray-100 bg-[#fafafa]">
@@ -19,25 +23,32 @@ export default function Footer() {
         </div>
 
         {/* Footer links */}
-        <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs font-medium text-gray-500 font-sans">
-          <a href="#docs" className="hover:text-black transition-colors">
-            Documentation
-          </a>
-          <a href="#support" className="hover:text-black transition-colors">
-            Support
-          </a>
-          <button 
-            onClick={() => setActiveTab('dashboard')} 
-            className="hover:text-black transition-colors"
-          >
-            API Keys
-          </button>
-          <button 
-            onClick={() => setActiveTab('dashboard')} 
-            className="hover:text-black transition-colors"
-          >
-            Settings
-          </button>
+        <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs font-medium text-gray-500 font-sans font-sans">
+          <Link href="/about" className="hover:text-black transition-colors">
+            About
+          </Link>
+          <Link href="/features" className="hover:text-black transition-colors">
+            Features
+          </Link>
+          <Link href="/contact" className="hover:text-black transition-colors">
+            Contact
+          </Link>
+          {user && (
+            <>
+              <button 
+                onClick={() => setActiveTab('api-keys')} 
+                className="hover:text-black transition-colors"
+              >
+                API Keys
+              </button>
+              <button 
+                onClick={() => setActiveTab('settings')} 
+                className="hover:text-black transition-colors"
+              >
+                Settings
+              </button>
+            </>
+          )}
         </div>
 
       </div>

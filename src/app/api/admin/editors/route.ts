@@ -6,7 +6,8 @@ import bcrypt from 'bcryptjs';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
+  if (!session?.user?.id || !isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -29,6 +30,12 @@ export async function GET() {
             skills: true,
           },
         },
+        _count: {
+          select: {
+            connectionsAsEditor: true,
+            assignmentsAsEditor: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -45,6 +52,8 @@ export async function GET() {
       editorKey: e.editorProfile?.editorKey || null,
       editorId: e.editorProfile?.editorId || null,
       specialization: e.editorProfile?.skills?.[0] || null,
+      assignedUsersCount: e._count.connectionsAsEditor,
+      assignedProjectsCount: e._count.assignmentsAsEditor,
     }));
 
     return NextResponse.json({ editors: formatted });
@@ -56,7 +65,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
+  if (!session?.user?.id || !isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

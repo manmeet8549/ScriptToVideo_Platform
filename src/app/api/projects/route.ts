@@ -26,9 +26,22 @@ export async function GET() {
   }
 
   const whereClause: any = {};
-  if (session.user.organizationId) {
-    whereClause.organizationId = session.user.organizationId;
+  const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
+  if (isUserAdmin) {
+    // Admins see all projects
+  } else if (session.user.role === 'EDITOR') {
+    // Editors see projects they have been assigned to via video assignments
+    whereClause.videos = {
+      some: {
+        assignments: {
+          some: {
+            editorId: session.user.id,
+          },
+        },
+      },
+    };
   } else {
+    // Regular users see only their own projects
     whereClause.userId = session.user.id;
   }
 
@@ -39,9 +52,23 @@ export async function GET() {
       _count: {
         select: { scripts: true, voices: true },
       },
+      user: {
+        select: { id: true, name: true, email: true },
+      },
       videos: {
         orderBy: { createdAt: 'desc' },
-        take: 1,
+        include: {
+          assignments: {
+            include: {
+              editor: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+      },
+      publishedVideos: {
+        orderBy: { createdAt: 'desc' },
       },
     },
   });

@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Users, Video, FolderClosed, Film, Coins, Activity, 
+  Users, Video, FolderClosed, Film, Activity, 
   ShieldCheck, Plus, Pause, Play, KeyRound, Loader2, 
-  Server, CheckCircle2, AlertCircle, RefreshCw
+  Server, CheckCircle2, AlertCircle, RefreshCw,
+  FileText, Mic, Globe
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import DashboardCalendarWidget from '@/components/DashboardCalendarWidget';
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null);
@@ -20,14 +22,11 @@ export default function AdminDashboardPage() {
   const [createUserName, setCreateUserName] = useState('');
   const [createUserRole, setCreateUserRole] = useState<'USER' | 'EDITOR' | 'ADMIN'>('USER');
 
-  const [showAssignCredits, setShowAssignCredits] = useState(false);
-  const [creditTargetEmail, setCreditTargetEmail] = useState('');
-  const [creditType, setCreditType] = useState<'video' | 'script' | 'voice'>('video');
-  const [creditAmount, setCreditAmount] = useState(10);
 
-  const fetchStats = async () => {
+
+  const fetchStats = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) setIsLoading(true);
       const res = await fetch('/api/admin/overview');
       if (res.ok) {
         const data = await res.json();
@@ -39,12 +38,16 @@ export default function AdminDashboardPage() {
       console.error(err);
       setMessage({ type: 'error', text: 'Error connecting to the API.' });
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
+    fetchStats(true);
+    const interval = setInterval(() => {
+      fetchStats(false);
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -79,36 +82,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAssignCredits = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setActionLoading('assign-credits');
-    setMessage(null);
-    try {
-      const res = await fetch('/api/admin/credits/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: creditTargetEmail,
-          type: creditType.toUpperCase(),
-          amount: creditAmount
-        })
-      });
-      if (res.ok) {
-        setMessage({ type: 'success', text: `Assigned ${creditAmount} ${creditType} credits to ${creditTargetEmail}.` });
-        setShowAssignCredits(false);
-        setCreditTargetEmail('');
-        setCreditAmount(10);
-        fetchStats();
-      } else {
-        const errData = await res.json();
-        setMessage({ type: 'error', text: errData.error || 'Failed to assign credits.' });
-      }
-    } catch (err) {
-      setMessage({ type: 'error', text: 'An unexpected error occurred.' });
-    } finally {
-      setActionLoading(null);
-    }
-  };
+
 
   const handleToggleAccountStatus = async (email: string, action: 'pause' | 'resume') => {
     setActionLoading(action);
@@ -160,7 +134,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <button 
-          onClick={fetchStats}
+          onClick={() => fetchStats(true)}
           className="p-2.5 text-gray-500 hover:text-black hover:bg-neutral-50 rounded-xl transition-all border border-gray-100 bg-white"
           title="Refresh Metrics"
         >
@@ -185,12 +159,12 @@ export default function AdminDashboardPage() {
       )}
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         {/* Total Users */}
         <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xs relative overflow-hidden">
           <CardContent className="p-0 flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Users</span>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Total Users</span>
               {isLoading ? (
                 <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
               ) : (
@@ -200,7 +174,7 @@ export default function AdminDashboardPage() {
                 {stats?.users?.active ?? 0} Active Accounts
               </span>
             </div>
-            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500">
+            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500 shrink-0">
               <Users className="h-5 w-5" />
             </div>
           </CardContent>
@@ -210,17 +184,17 @@ export default function AdminDashboardPage() {
         <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xs relative overflow-hidden">
           <CardContent className="p-0 flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Editors</span>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Total Editors</span>
               {isLoading ? (
                 <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
               ) : (
                 <div className="text-2xl font-black text-black">{stats?.editors?.total ?? 0}</div>
               )}
               <span className="text-[10px] text-gray-400 font-bold block">
-                {stats?.editors?.active ?? 0} Available Online
+                {stats?.editors?.active ?? 0} Online
               </span>
             </div>
-            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500">
+            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500 shrink-0">
               <Video className="h-5 w-5" />
             </div>
           </CardContent>
@@ -230,18 +204,38 @@ export default function AdminDashboardPage() {
         <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xs relative overflow-hidden">
           <CardContent className="p-0 flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Projects</span>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Total Projects</span>
               {isLoading ? (
                 <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
               ) : (
                 <div className="text-2xl font-black text-black">{stats?.projectsCreated ?? 0}</div>
               )}
               <span className="text-[10px] text-gray-400 font-bold block">
-                In generation pipeline
+                All-time projects
               </span>
             </div>
-            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500">
+            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500 shrink-0">
               <FolderClosed className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Projects */}
+        <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xs relative overflow-hidden">
+          <CardContent className="p-0 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Active Projects</span>
+              {isLoading ? (
+                <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
+              ) : (
+                <div className="text-2xl font-black text-black text-amber-600">{stats?.activeProjects ?? 0}</div>
+              )}
+              <span className="text-[10px] text-amber-500 font-bold block">
+                In progress
+              </span>
+            </div>
+            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500 shrink-0">
+              <Activity className="h-5 w-5 text-amber-500" />
             </div>
           </CardContent>
         </Card>
@@ -250,18 +244,38 @@ export default function AdminDashboardPage() {
         <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xs relative overflow-hidden">
           <CardContent className="p-0 flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Videos Generated</span>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Videos Generated</span>
               {isLoading ? (
                 <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
               ) : (
                 <div className="text-2xl font-black text-black">{stats?.videosGenerated ?? 0}</div>
               )}
               <span className="text-[10px] text-emerald-600 font-bold block">
-                100% rendering success rate
+                100% success rate
               </span>
             </div>
-            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500">
+            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500 shrink-0">
               <Film className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Published Videos */}
+        <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-xs relative overflow-hidden">
+          <CardContent className="p-0 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block truncate">Published Videos</span>
+              {isLoading ? (
+                <div className="h-8 w-16 bg-gray-100 rounded animate-pulse" />
+              ) : (
+                <div className="text-2xl font-black text-black text-emerald-600">{stats?.publishedVideos ?? 0}</div>
+              )}
+              <span className="text-[10px] text-emerald-600 font-bold block">
+                Distributed social clips
+              </span>
+            </div>
+            <div className="h-11 w-11 rounded-2xl bg-neutral-50 border border-gray-100 flex items-center justify-center text-neutral-500 shrink-0">
+              <Globe className="h-5 w-5 text-emerald-500" />
             </div>
           </CardContent>
         </Card>
@@ -312,7 +326,7 @@ export default function AdminDashboardPage() {
             <CardContent className="p-0 space-y-6">
               <h3 className="font-bold text-lg text-black font-sans leading-tight">Quick Administrator Actions</h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Create User Button */}
                 <button
                   onClick={() => setShowCreateUser(!showCreateUser)}
@@ -322,18 +336,6 @@ export default function AdminDashboardPage() {
                   <div>
                     <span className="font-bold text-xs text-black block">Create User / Editor</span>
                     <span className="text-[10px] text-gray-400">Add new credentials</span>
-                  </div>
-                </button>
-
-                {/* Assign Credits Button */}
-                <button
-                  onClick={() => setShowAssignCredits(!showAssignCredits)}
-                  className="p-4 rounded-2xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-100/50 transition-all text-left flex flex-col justify-between h-32"
-                >
-                  <Coins className="h-5 w-5 text-neutral-600" />
-                  <div>
-                    <span className="font-bold text-xs text-black block">Assign Credits</span>
-                    <span className="text-[10px] text-gray-400">Add script or video tokens</span>
                   </div>
                 </button>
 
@@ -432,66 +434,90 @@ export default function AdminDashboardPage() {
         </Card>
       )}
 
-      {showAssignCredits && (
-        <Card className="rounded-3xl border border-gray-100 bg-white p-6 shadow-md max-w-md">
-          <CardContent className="p-0 space-y-4">
-            <h3 className="font-bold text-sm text-black">Assign Platform Credits</h3>
-            <form onSubmit={handleAssignCredits} className="space-y-3">
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Recipient Email</label>
-                <input 
-                  type="email" 
-                  value={creditTargetEmail}
-                  onChange={e => setCreditTargetEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  required
-                  className="w-full text-xs p-2.5 rounded-xl border border-gray-100 focus:outline-none focus:ring-1 focus:ring-black"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Credit Type</label>
-                <select
-                  value={creditType}
-                  onChange={e => setCreditType(e.target.value as any)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-gray-100 focus:outline-none focus:ring-1 focus:ring-black bg-white"
-                >
-                  <option value="video">Video Generation</option>
-                  <option value="script">Script Generation</option>
-                  <option value="voice">Voice Generation</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Amount</label>
-                <input 
-                  type="number" 
-                  value={creditAmount}
-                  onChange={e => setCreditAmount(parseInt(e.target.value) || 0)}
-                  min={1}
-                  required
-                  className="w-full text-xs p-2.5 rounded-xl border border-gray-100 focus:outline-none focus:ring-1 focus:ring-black"
-                />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button 
-                  type="submit" 
-                  disabled={actionLoading === 'assign-credits'}
-                  className="flex-1 py-2 text-xs font-semibold bg-black text-white hover:bg-neutral-800 rounded-xl transition-all flex items-center justify-center gap-1.5"
-                >
-                  {actionLoading === 'assign-credits' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  Assign Tokens
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setShowAssignCredits(false)}
-                  className="px-4 py-2 text-xs font-semibold bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+      {/* Live Operations Queue */}
+      <Card className="rounded-3xl border border-gray-100 bg-white p-8 shadow-xs">
+        <CardContent className="p-0 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="font-bold text-lg text-black font-sans leading-tight flex items-center gap-2">
+                <Activity className="h-5 w-5 text-emerald-500 animate-pulse" />
+                Live Operations Queue
+              </h3>
+              <p className="text-xs text-gray-500">
+                Real-time queue tracking script, voice, video generation, and publishing tasks. Auto-refreshing every 10s.
+              </p>
+            </div>
+            <span className="text-[10px] bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-full font-bold">
+              10s Polling Active
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-neutral-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <th className="pb-3 font-semibold">Job ID</th>
+                  <th className="pb-3 font-semibold">Type</th>
+                  <th className="pb-3 font-semibold">Asset / Campaign</th>
+                  <th className="pb-3 font-semibold">Client</th>
+                  <th className="pb-3 font-semibold">Created At</th>
+                  <th className="pb-3 font-semibold text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50/50 text-xs">
+                {stats?.queue && stats.queue.length > 0 ? (
+                  stats.queue.map((job: any) => (
+                    <tr key={job.id} className="hover:bg-neutral-50/50 transition-colors">
+                      <td className="py-3.5 font-mono text-[10px] text-gray-400">
+                        {job.id.substring(0, 8)}...
+                      </td>
+                      <td className="py-3.5 font-semibold text-black">
+                        <span className="flex items-center gap-1.5">
+                          {job.type === 'Script Job' && <FileText className="h-3.5 w-3.5 text-blue-500" />}
+                          {job.type === 'Voice Job' && <Mic className="h-3.5 w-3.5 text-purple-500" />}
+                          {job.type === 'Video Job' && <Film className="h-3.5 w-3.5 text-amber-500" />}
+                          {job.type === 'Publishing Job' && <Globe className="h-3.5 w-3.5 text-emerald-500" />}
+                          {job.type}
+                        </span>
+                      </td>
+                      <td className="py-3.5 text-gray-600 truncate max-w-[200px]">
+                        {job.name}
+                      </td>
+                      <td className="py-3.5 text-gray-600 font-medium">
+                        {job.client}
+                      </td>
+                      <td className="py-3.5 text-gray-400">
+                        {new Date(job.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </td>
+                      <td className="py-3.5 text-right">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          job.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' :
+                          job.status === 'Running' ? 'bg-blue-50 text-blue-700 animate-pulse' :
+                          job.status === 'Pending' ? 'bg-amber-50 text-amber-700' :
+                          job.status === 'Failed' ? 'bg-rose-50 text-rose-700 font-semibold' :
+                          job.status === 'Paused' ? 'bg-neutral-100 text-neutral-600' :
+                          'bg-neutral-50 text-neutral-400'
+                        }`}>
+                          {job.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-400 font-medium">
+                      No active or recent jobs found in the queue.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Calendar Widget */}
+      <DashboardCalendarWidget portal="admin" />
     </div>
   );
 }

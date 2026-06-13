@@ -355,19 +355,18 @@ Sign-In URL: ${window.location.origin}
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-gray-400 font-bold text-xs uppercase tracking-wider">
-                  <th className="p-4">Editor ID</th>
                   <th className="p-4">Name</th>
                   <th className="p-4">Email / Phone</th>
-                  <th className="p-4">Specialization</th>
-                  <th className="p-4">Editor Key</th>
+                  <th className="p-4">Connection Key</th>
+                  <th className="p-4">Assigned Users</th>
+                  <th className="p-4">Assigned Projects</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {editors.map((e) => (
+                {editors.map((e: any) => (
                   <tr key={e.id} className="hover:bg-gray-50/50">
-                    <td className="p-4 font-mono font-semibold text-neutral-700">{e.editorId || 'N/A'}</td>
                     <td className="p-4 font-semibold text-black">
                       <Link href={`/admin/editors/${e.id}`} className="hover:underline">
                         {e.name || 'N/A'}
@@ -377,16 +376,15 @@ Sign-In URL: ${window.location.origin}
                       <div className="text-gray-900 font-medium">{e.email}</div>
                       {e.phoneNumber && <div className="text-xs text-gray-400">{e.phoneNumber}</div>}
                     </td>
-                    <td className="p-4">
-                      {e.specialization ? (
-                        <span className="px-2.5 py-1 rounded bg-neutral-100 text-neutral-800 text-xs font-semibold">
-                          {e.specialization}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-xs font-medium">None</span>
-                      )}
+                    <td className="p-4 font-mono text-xs font-semibold text-gray-700 bg-gray-50/50 rounded px-2 py-1 select-all">
+                      {e.editorKey || 'N/A'}
                     </td>
-                    <td className="p-4 font-mono text-xs font-semibold text-gray-700 bg-gray-50/50 rounded px-2 py-1 select-all">{e.editorKey}</td>
+                    <td className="p-4 text-gray-500 font-semibold">
+                      {e.assignedUsersCount ?? 0} Clients
+                    </td>
+                    <td className="p-4 text-gray-500 font-semibold">
+                      {e.assignedProjectsCount ?? 0} Projects
+                    </td>
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                         e.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-200' :
@@ -397,6 +395,7 @@ Sign-In URL: ${window.location.origin}
                       </span>
                     </td>
                     <td className="p-4 text-right space-x-2">
+                      <Link href={`/admin/editors/${e.id}`} className="text-neutral-600 hover:underline text-xs font-bold mr-2">View</Link>
                       {e.status === 'ACTIVE' ? (
                         <button onClick={() => handleAction(e.id, 'PAUSED')} className="text-amber-600 hover:underline text-xs font-bold">Pause</button>
                       ) : (

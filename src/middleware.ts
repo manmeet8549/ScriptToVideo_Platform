@@ -1,6 +1,16 @@
 import { edgeAuth as auth } from '@/auth.config';
 import { NextResponse } from 'next/server';
 
+function getDashboardUrl(role: string | undefined): string {
+  if (role === 'SUPER_ADMIN' || role === 'ORG_ADMIN' || role === 'ADMIN') {
+    return '/admin/dashboard';
+  } else if (role === 'EDITOR') {
+    return '/editor/dashboard';
+  } else {
+    return '/user/dashboard';
+  }
+}
+
 export default auth(async (req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
@@ -26,7 +36,7 @@ export default auth(async (req) => {
       if (path.startsWith('/api')) {
         return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
       }
-      return NextResponse.redirect(new URL('/', nextUrl.origin));
+      return NextResponse.redirect(new URL('/login', nextUrl.origin));
     }
     return NextResponse.next();
   }
@@ -68,15 +78,9 @@ export default auth(async (req) => {
       }
     }
 
-    // Root path redirection based on role
-    if (path === '/') {
-      if (role === 'SUPER_ADMIN' || role === 'ORG_ADMIN' || role === 'ADMIN') {
-        return NextResponse.redirect(new URL('/admin/dashboard', nextUrl.origin));
-      } else if (role === 'EDITOR') {
-        return NextResponse.redirect(new URL('/editor/dashboard', nextUrl.origin));
-      } else {
-        return NextResponse.redirect(new URL('/user/dashboard', nextUrl.origin));
-      }
+    // Root/Login/Signup path redirection based on role
+    if (path === '/' || path === '/login' || path === '/signup') {
+      return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
     }
 
     // C. Enforce Super Admin Routes (Only SUPER_ADMIN)
@@ -85,7 +89,7 @@ export default auth(async (req) => {
         if (path.startsWith('/api')) {
           return NextResponse.json({ error: 'Access denied. Super Administrator role required.' }, { status: 403 });
         }
-        return new NextResponse('Access denied. Super Administrator role required.', { status: 403 });
+        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
       }
     }
 
@@ -95,7 +99,7 @@ export default auth(async (req) => {
         if (path.startsWith('/api')) {
           return NextResponse.json({ error: 'Access denied. Administrator role required.' }, { status: 403 });
         }
-        return new NextResponse('Access denied. Administrator role required.', { status: 403 });
+        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
       }
     }
 
@@ -105,7 +109,7 @@ export default auth(async (req) => {
         if (path.startsWith('/api')) {
           return NextResponse.json({ error: 'Access denied. Editor role required.' }, { status: 403 });
         }
-        return new NextResponse('Access denied. Editor role required.', { status: 403 });
+        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
       }
     }
 
@@ -115,7 +119,7 @@ export default auth(async (req) => {
         if (path.startsWith('/api')) {
           return NextResponse.json({ error: 'Access denied. User role required.' }, { status: 403 });
         }
-        return new NextResponse('Access denied. User role required.', { status: 403 });
+        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
       }
     }
   }

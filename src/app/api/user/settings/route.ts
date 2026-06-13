@@ -85,6 +85,11 @@ export async function GET() {
         projectsCreated,
         connectedProviders,
       },
+      security: {
+        createdAt: user.createdAt.toISOString(),
+        lastLoginAt: user.lastLoginAt?.toISOString() || null,
+        passwordChangedAt: user.passwordChangedAt?.toISOString() || null,
+      },
     });
   } catch (error) {
     console.error('[SETTINGS GET] Error:', error);

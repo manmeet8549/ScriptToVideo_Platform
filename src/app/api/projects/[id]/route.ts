@@ -27,16 +27,35 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL
-    await backfillUserVideos(session.user.id);
+    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL (skip for editors)
+    if (session.user.role !== 'EDITOR') {
+      try {
+        await backfillUserVideos(session.user.id);
+      } catch (err) {
+        console.error('[PROJECT_GET_DETAIL] Failed to backfill videos:', err);
+      }
+    }
   } catch (err) {
-    console.error('[PROJECT_GET_DETAIL] Failed to backfill videos:', err);
+    console.error('[PROJECT_GET_DETAIL] Error checking/backfilling videos:', err);
   }
 
   const whereClause: any = { id: params.id };
-  if (session.user.organizationId) {
-    whereClause.organizationId = session.user.organizationId;
+  const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
+  if (isUserAdmin) {
+    // Admin has full access
+  } else if (session.user.role === 'EDITOR') {
+    // Editor has access ONLY if there is an assignment for a video of this project
+    const assignment = await db.videoAssignment.findFirst({
+      where: {
+        editorId: session.user.id,
+        video: { projectId: params.id },
+      },
+    });
+    if (!assignment) {
+      return NextResponse.json({ error: 'Project not found or access denied.' }, { status: 404 });
+    }
   } else {
+    // Regular user has access ONLY to their own projects
     whereClause.userId = session.user.id;
   }
 
@@ -101,11 +120,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Verify ownership
+    // Verify ownership (only ADMIN or the user creator can update/patch)
+    const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
     const whereClause: any = { id: params.id };
-    if (session.user.organizationId) {
-      whereClause.organizationId = session.user.organizationId;
-    } else {
+    if (!isUserAdmin) {
       whereClause.userId = session.user.id;
     }
 
@@ -135,11 +153,10 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify ownership
+  // Verify ownership (only ADMIN or the user creator can delete)
+  const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
   const whereClause: any = { id: params.id };
-  if (session.user.organizationId) {
-    whereClause.organizationId = session.user.organizationId;
-  } else {
+  if (!isUserAdmin) {
     whereClause.userId = session.user.id;
   }
 

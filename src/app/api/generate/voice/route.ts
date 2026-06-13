@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { projectId, voiceId, speed, pitch, emotion } = await request.json();
+    const { projectId, voiceId, speed, pitch, emotion, settings } = await request.json();
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
@@ -206,10 +206,10 @@ export async function POST(request: NextRequest) {
           text: project.scriptText,
           model_id: 'eleven_monolingual_v1',
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            style: 0.0,
-            use_speaker_boost: true,
+            stability: typeof settings?.stability === 'number' ? settings.stability : 0.5,
+            similarity_boost: typeof settings?.similarity_boost === 'number' ? settings.similarity_boost : 0.75,
+            style: typeof settings?.style === 'number' ? settings.style : 0.0,
+            use_speaker_boost: typeof settings?.use_speaker_boost === 'boolean' ? settings.use_speaker_boost : true,
           },
         }),
       }

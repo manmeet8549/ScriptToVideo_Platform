@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { editorKey } = await request.json();
 
     if (!editorKey?.trim()) {
-      return NextResponse.json({ error: 'Editor key is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Editor connection code is required.' }, { status: 400 });
     }
 
     const trimmedKey = editorKey.trim();
@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!editorProfile || !editorProfile.user || editorProfile.user.deletedAt) {
-      return NextResponse.json({ error: 'Invalid Editor Key.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid Editor Connection Code.' }, { status: 400 });
     }
 
     const editorUser = editorProfile.user;
 
     // Reject paused, stopped or deleted editors
     if (editorUser.accountStatus === 'DELETED') {
-      return NextResponse.json({ error: 'Invalid Editor Key.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid Editor Connection Code.' }, { status: 400 });
     }
 
     if (editorUser.accountStatus === 'PAUSED') {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Check if a connection already exists
-    const existingConnection = await db.editorConnection.findUnique({
+    const existingConnection = await db.editorUserConnection.findUnique({
       where: {
         userId_editorId: {
           userId: session.user.id,
@@ -91,31 +91,31 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // If DISCONNECTED, restore connection
-      connection = await db.editorConnection.update({
+      // If DISCONNECTED, restore connection as ACTIVE directly
+      connection = await db.editorUserConnection.update({
         where: { id: existingConnection.id },
         data: {
           status: 'ACTIVE',
           connectedAt: new Date(),
-          editorKey: trimmedKey,
+          connectionCode: trimmedKey,
         },
       });
 
       // Log action: RESTORED
-      await logActivity(session.user.id, 'CONNECTION_RESTORED', editorUser.id, { editorKey: trimmedKey });
+      await logActivity(session.user.id, 'CONNECTION_RESTORED', editorUser.id, { connectionCode: trimmedKey });
     } else {
-      // Create new connection
-      connection = await db.editorConnection.create({
+      // Create new connection as ACTIVE directly
+      connection = await db.editorUserConnection.create({
         data: {
           userId: session.user.id,
           editorId: editorUser.id,
-          editorKey: trimmedKey,
+          connectionCode: trimmedKey,
           status: 'ACTIVE',
         },
       });
 
-      // Log action: CONNECTED
-      await logActivity(session.user.id, 'EDITOR_CONNECTED', editorUser.id, { editorKey: trimmedKey });
+      // Log action: CREATED
+      await logActivity(session.user.id, 'CONNECTION_CREATED', editorUser.id, { connectionCode: trimmedKey });
     }
 
     // 3. Create notifications
@@ -127,13 +127,13 @@ export async function POST(request: NextRequest) {
         data: {
           userId: session.user.id,
           title: 'Editor Connected',
-          message: `You are now connected with ${editorName} (${editorUser.email}).`,
+          message: `You are now connected with editor ${editorName} (${editorUser.email}).`,
         },
       }),
       db.notification.create({
         data: {
           userId: editorUser.id,
-          title: 'New User Connected',
+          title: 'New Client Connected',
           message: `${userName} (${session.user.email}) has connected with you.`,
         },
       }),
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Connected successfully!',
+      message: `Successfully connected to editor ${editorName}!`,
       connection,
     });
   } catch (error) {

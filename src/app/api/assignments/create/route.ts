@@ -9,7 +9,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (session.user.role !== 'USER' && session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
+  if (session.user.role !== 'USER' && !isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Verify video ownership and check status
     const video = await db.video.findFirst({
-      where: { id: videoId, userId: session.user.id },
+      where: isAdmin ? { id: videoId } : { id: videoId, userId: session.user.id },
     });
 
     if (!video) {
@@ -34,10 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Verify connection status
-    const connection = await db.editorConnection.findUnique({
+    const connection = await db.editorUserConnection.findUnique({
       where: {
         userId_editorId: {
-          userId: session.user.id,
+          userId: video.userId,
           editorId,
         },
       },
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     const assignment = await db.videoAssignment.create({
       data: {
         videoId,
-        userId: session.user.id,
+        userId: video.userId,
         editorId,
         notes: notes?.trim() || null,
         status: 'PENDING',

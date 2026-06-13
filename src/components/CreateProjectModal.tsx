@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAppStore } from '@/store/store';
 import { useCreateProject } from '@/hooks/useProjects';
 import {
@@ -36,6 +37,8 @@ type FormData = z.infer<typeof createProjectSchema>;
 export default function CreateProjectModal() {
   const { isCreateModalOpen, setIsCreateModalOpen, prefilledProjectData, setPrefilledProjectData, openProject } = useAppStore();
   const createProject = useCreateProject();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const {
     register,
@@ -83,7 +86,13 @@ export default function CreateProjectModal() {
       setPrefilledProjectData(null);
       reset();
       if (res?.project?.id) {
-        openProject(res.project.id);
+        if (pathname.startsWith('/admin')) {
+          router.push(`/admin/projects/${res.project.id}`);
+        } else if (pathname.startsWith('/user')) {
+          router.push(`/user/projects/${res.project.id}`);
+        } else {
+          openProject(res.project.id);
+        }
       }
     } catch (error) {
       // Error is handled by the mutation's onError — form stays open

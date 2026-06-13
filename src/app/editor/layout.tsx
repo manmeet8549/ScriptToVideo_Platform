@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { 
-  LayoutDashboard, FileText, UploadCloud, Settings, LogOut, Menu, X 
+  LayoutDashboard, FileText, UploadCloud, Settings, LogOut, Menu, X, Users, Calendar 
 } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
 
@@ -21,7 +21,9 @@ export default function EditorLayout({
 
   const navItems = [
     { href: '/editor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/editor/connections', label: 'Connections', icon: Users },
     { href: '/editor/assignments', label: 'Assigned Projects', icon: FileText },
+    { href: '/editor/calendar', label: 'Calendar', icon: Calendar },
     { href: '/editor/uploads', label: 'Uploads Log', icon: UploadCloud },
     { href: '/editor/settings', label: 'My Settings', icon: Settings },
   ];

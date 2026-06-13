@@ -9,10 +9,13 @@ export async function GET() {
   }
 
   try {
+    const whereClause: any = {};
+    if (session.user.role !== 'ADMIN') {
+      whereClause.userId = session.user.id;
+    }
+
     const publishedVideos = await db.publishedVideo.findMany({
-      where: {
-        userId: session.user.id,
-      },
+      where: whereClause,
       orderBy: {
         createdAt: 'desc',
       },

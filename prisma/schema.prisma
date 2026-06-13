@@ -71,6 +71,7 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  passwordChangedAt DateTime?
 
   editorProfile EditorProfile?
 
@@ -85,12 +86,14 @@ model User {
   videos            Video[]
   socialAccounts    SocialAccount[]
   publishedVideos   PublishedVideo[]
-  connectionsAsUser   EditorConnection[] @relation("UserConnections")
-  connectionsAsEditor EditorConnection[] @relation("EditorConnections")
+  connectionsAsUser   EditorUserConnection[] @relation("UserConnections")
+  connectionsAsEditor EditorUserConnection[] @relation("EditorConnections")
   notifications       Notification[]
   assignmentsAsUser   VideoAssignment[] @relation("UserAssignments")
   assignmentsAsEditor VideoAssignment[] @relation("EditorAssignments")
   approvalRequests    ApprovalRequest[]
+  calendarEventsAsUser   CalendarEvent[] @relation("UserEvents")
+  calendarEventsAsEditor CalendarEvent[] @relation("EditorEvents")
 
   // Credit System
   creditWallet        CreditWallet?
@@ -234,6 +237,8 @@ enum ProjectStatus {
   GENERATING
   COMPLETED
   FAILED
+  PAUSED
+  ARCHIVED
 }
 
 enum ProjectStep {
@@ -257,9 +262,12 @@ enum GenerationType {
 
 enum GenerationStatus {
   PENDING
+  RUNNING
   IN_PROGRESS
   COMPLETED
   FAILED
+  PAUSED
+  CANCELLED
 }
 
 enum Role {
@@ -371,11 +379,11 @@ model EditorProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model EditorConnection {
+model EditorUserConnection {
   id             String           @id @default(cuid())
   userId         String
   editorId       String
-  editorKey      String
+  connectionCode String
   status         ConnectionStatus @default(ACTIVE)
   createdAt      DateTime         @default(now())
   connectedAt    DateTime         @default(now())
@@ -480,6 +488,8 @@ enum ConnectionStatus {
   ACTIVE
   DISCONNECTED
   BLOCKED
+  PENDING
+  REJECTED
 }
 
 enum EditorAvailability {
@@ -706,5 +716,48 @@ model AutomationRule {
   updatedAt      DateTime      @updatedAt
 
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  title       String
+  description String?           @db.Text
+  type        CalendarEventType
+  startDate   DateTime
+  dueDate     DateTime
+  priority    EventPriority     @default(MEDIUM)
+  status      EventStatus       @default(PENDING)
+
+  userId      String?
+  user        User?             @relation("UserEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  editorId    String?
+  editor      User?             @relation("EditorEvents", fields: [editorId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+enum CalendarEventType {
+  MEETING
+  TASK
+  DEADLINE
+  DELIVERY
+  REVIEW
+  ASSIGNMENT
+}
+
+enum EventPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EventStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 

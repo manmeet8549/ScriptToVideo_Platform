@@ -30,13 +30,24 @@ export async function GET() {
   }
 
   try {
-    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL
-    await backfillUserVideos(session.user.id);
+    // Run the backfill audit pipeline to ensure all videos are in R2 and PostgreSQL (skip for editors)
+    if (session.user.role !== 'EDITOR') {
+      await backfillUserVideos(session.user.id);
+    }
 
     const whereClause: any = {};
-    if (session.user.organizationId) {
-      whereClause.organizationId = session.user.organizationId;
+    const isUserAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session.user.role || '');
+    if (isUserAdmin) {
+      // Admin sees everything
+    } else if (session.user.role === 'EDITOR') {
+      // Editor sees only videos for which they have assignments
+      whereClause.assignments = {
+        some: {
+          editorId: session.user.id,
+        },
+      };
     } else {
+      // User sees only their own videos
       whereClause.userId = session.user.id;
     }
 

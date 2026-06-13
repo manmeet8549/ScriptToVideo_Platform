@@ -34,10 +34,6 @@ export default function AdminUsersPage() {
     email: '',
     phoneNumber: '',
     accountStatus: 'ACTIVE',
-    scriptCredits: 10,
-    voiceCredits: 10,
-    videoCredits: 5,
-    publishCredits: 5,
   });
 
   const [createLoading, setCreateLoading] = useState(false);
@@ -85,12 +81,6 @@ export default function AdminUsersPage() {
           email: form.email,
           phoneNumber: form.phoneNumber || undefined,
           accountStatus: form.accountStatus,
-          creditAllocation: {
-            scriptCredits: Number(form.scriptCredits),
-            voiceCredits: Number(form.voiceCredits),
-            videoCredits: Number(form.videoCredits),
-            publishCredits: Number(form.publishCredits),
-          },
         }),
       });
       const data = await res.json();
@@ -106,10 +96,6 @@ export default function AdminUsersPage() {
           email: '',
           phoneNumber: '',
           accountStatus: 'ACTIVE',
-          scriptCredits: 10,
-          voiceCredits: 10,
-          videoCredits: 5,
-          publishCredits: 5,
         });
         fetchUsers();
       } else {
@@ -278,56 +264,7 @@ Sign-In URL: ${window.location.origin}
               </div>
             </div>
 
-            {/* Credits Allocation Section */}
-            <div className="space-y-3 pt-3 border-t">
-              <h3 className="text-sm font-bold text-black uppercase tracking-wider">Credits Allocation</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-400">Script Credits</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={form.scriptCredits}
-                    onChange={(e) => setForm({ ...form, scriptCredits: Number(e.target.value) })}
-                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-400">Voice Credits</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={form.voiceCredits}
-                    onChange={(e) => setForm({ ...form, voiceCredits: Number(e.target.value) })}
-                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-400">Video Credits</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={form.videoCredits}
-                    onChange={(e) => setForm({ ...form, videoCredits: Number(e.target.value) })}
-                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-400">Publish Credits</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={form.publishCredits}
-                    onChange={(e) => setForm({ ...form, publishCredits: Number(e.target.value) })}
-                    className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-black"
-                  />
-                </div>
-              </div>
-            </div>
+
 
             <button
               type="submit"
@@ -428,15 +365,16 @@ Sign-In URL: ${window.location.origin}
                 <tr className="bg-gray-50 border-b border-gray-100 text-gray-400 font-bold text-xs uppercase tracking-wider">
                   <th className="p-4">Name</th>
                   <th className="p-4">Email / Phone</th>
+                  <th className="p-4">Created Date</th>
+                  <th className="p-4">Assigned Editor</th>
                   <th className="p-4">Status</th>
-                  <th className="p-4">Credits Allocation</th>
                   <th className="p-4">Projects</th>
                   <th className="p-4">Videos</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {users.map((u) => (
+                {users.map((u: any) => (
                   <tr key={u.id} className="hover:bg-gray-50/50">
                     <td className="p-4 font-semibold text-black">
                       <Link href={`/admin/users/${u.id}`} className="hover:underline">
@@ -447,6 +385,12 @@ Sign-In URL: ${window.location.origin}
                       <div className="text-gray-900 font-medium">{u.email}</div>
                       {u.phoneNumber && <div className="text-xs text-gray-400">{u.phoneNumber}</div>}
                     </td>
+                    <td className="p-4 text-gray-500 font-semibold">
+                      {new Date(u.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="p-4 text-gray-600 font-semibold truncate max-w-[150px]">
+                      {u.assignedEditors || 'None'}
+                    </td>
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                         u.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border border-green-200' :
@@ -456,21 +400,11 @@ Sign-In URL: ${window.location.origin}
                         {u.status}
                       </span>
                     </td>
-                    <td className="p-4 text-xs font-medium text-gray-500">
-                      {u.credits ? (
-                        <div className="flex gap-3">
-                          <span>Script: <strong className="text-gray-700">{u.credits.scriptCredits}</strong></span>
-                          <span>Voice: <strong className="text-gray-700">{u.credits.voiceCredits}</strong></span>
-                          <span>Video: <strong className="text-gray-700">{u.credits.videoCredits}</strong></span>
-                          <span>Publish: <strong className="text-gray-700">{u.credits.publishCredits}</strong></span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">None</span>
-                      )}
-                    </td>
+
                     <td className="p-4 text-gray-500 font-semibold">{u.projectsCount}</td>
                     <td className="p-4 text-gray-500 font-semibold">{u.videosCount}</td>
                     <td className="p-4 text-right space-x-2">
+                      <Link href={`/admin/users/${u.id}`} className="text-neutral-600 hover:underline text-xs font-bold mr-2">View</Link>
                       {u.status === 'ACTIVE' ? (
                         <button onClick={() => handleAction(u.id, 'PAUSED')} className="text-amber-600 hover:underline text-xs font-bold">Pause</button>
                       ) : (

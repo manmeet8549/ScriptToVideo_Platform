@@ -14,9 +14,10 @@ export async function GET() {
   }
 
   try {
-    const connections = await db.editorConnection.findMany({
+    const connections = await db.editorUserConnection.findMany({
       where: {
         editorId: session.user.id,
+        status: 'ACTIVE',
       },
       include: {
         user: {
@@ -30,7 +31,35 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ connections });
+    const connectionsWithProjectCount = await Promise.all(
+      connections.map(async (c) => {
+        // Count active video assignments between this user and this editor
+        const activeProjectsCount = await db.videoAssignment.count({
+          where: {
+            userId: c.userId,
+            editorId: session.user.id,
+            status: {
+              notIn: ['COMPLETED', 'APPROVED', 'REJECTED'],
+            },
+          },
+        });
+
+        return {
+          id: c.id,
+          userId: c.userId,
+          editorId: c.editorId,
+          connectionCode: c.connectionCode,
+          status: c.status,
+          createdAt: c.createdAt.toISOString(),
+          connectedAt: c.connectedAt.toISOString(),
+          disconnectedAt: c.disconnectedAt?.toISOString() || null,
+          user: c.user,
+          activeProjects: activeProjectsCount,
+        };
+      })
+    );
+
+    return NextResponse.json({ connections: connectionsWithProjectCount });
   } catch (error) {
     console.error('[EDITORS/MY-USERS] Error:', error);
     return NextResponse.json({ error: 'Failed to retrieve connected clients.' }, { status: 500 });

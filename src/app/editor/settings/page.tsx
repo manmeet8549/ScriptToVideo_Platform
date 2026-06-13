@@ -1,6 +1,7 @@
 'use client';
 
 import EditorProfileSection from '@/components/EditorProfileSection';
+import SecurityAccountSection from '@/components/SecurityAccountSection';
 
 export default function EditorSettingsPage() {
   return (
@@ -15,6 +16,9 @@ export default function EditorSettingsPage() {
       </div>
       <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xs">
         <EditorProfileSection />
+      </div>
+      <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xs">
+        <SecurityAccountSection />
       </div>
     </div>
   );

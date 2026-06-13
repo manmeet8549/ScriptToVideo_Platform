@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useAppStore } from '@/store/store';
 import { useProjects, useDeleteProject, useCreateProject, useUpdateProject } from '@/hooks/useProjects';
@@ -22,9 +23,23 @@ import {
 } from 'lucide-react';
 
 export default function ProjectsList() {
-  const { searchQuery, setSearchQuery, setAuthView, setIsCreateModalOpen, openProject } = useAppStore();
+  const { searchQuery, setSearchQuery, setAuthView, setIsCreateModalOpen } = useAppStore();
   const { data: session } = useSession();
   const user = session?.user;
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleOpenProject = (projectId: string) => {
+    if (!user) {
+      setAuthView('login');
+      return;
+    }
+    if (pathname.startsWith('/admin')) {
+      router.push(`/admin/projects/${projectId}`);
+    } else {
+      router.push(`/user/projects/${projectId}`);
+    }
+  };
 
   // API hooks
   const { data: projects = [], isLoading } = useProjects();
@@ -306,13 +321,7 @@ export default function ProjectsList() {
               className="rounded-[32px] border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
             >
               <div 
-                onClick={() => {
-                  if (!user) {
-                    setAuthView('login');
-                  } else {
-                    openProject(project.id);
-                  }
-                }}
+              onClick={() => handleOpenProject(project.id)}
                 className="bg-neutral-100 h-44 relative flex items-center justify-center cursor-pointer border-b border-gray-50 overflow-hidden"
               >
                 {(() => {
@@ -393,13 +402,7 @@ export default function ProjectsList() {
                   {/* Actions line */}
                   <div className="flex items-center justify-between">
                     <button
-                      onClick={() => {
-                        if (!user) {
-                          setAuthView('login');
-                        } else {
-                          openProject(project.id);
-                        }
-                      }}
+                      onClick={() => handleOpenProject(project.id)}
                       className="text-xs font-bold text-black hover:underline cursor-pointer"
                     >
                       Open Project

@@ -183,6 +183,15 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+const NARRATION_PRESETS: Record<string, { stability: number; similarity_boost: number; style: number; use_speaker_boost: boolean }> = {
+  'Narration': { stability: 0.75, similarity_boost: 0.85, style: 0.0, use_speaker_boost: true },
+  'Podcast': { stability: 0.60, similarity_boost: 0.75, style: 0.10, use_speaker_boost: true },
+  'Commercial': { stability: 0.45, similarity_boost: 0.75, style: 0.25, use_speaker_boost: true },
+  'Storytelling': { stability: 0.55, similarity_boost: 0.80, style: 0.15, use_speaker_boost: true },
+  'News Reader': { stability: 0.80, similarity_boost: 0.85, style: 0.0, use_speaker_boost: true },
+  'Educational': { stability: 0.70, similarity_boost: 0.80, style: 0.05, use_speaker_boost: true },
+};
+
 // ─── Main Pipeline Component ──────────────────────────────────────────────────
 
 export default function ProjectPipeline() {
@@ -237,6 +246,12 @@ export default function ProjectPipeline() {
   const [generatedScript, setGeneratedScript] = useState<string | null>(null);
   const [generatedAudio, setGeneratedAudio] = useState<string | null>(null);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+
+  useEffect(() => {
+    setVideoError(false);
+  }, [generatedVideoUrl]);
 
   // Form fields for Step 1 (Idea)
   const [ideaConcept, setIdeaConcept] = useState('');
@@ -251,6 +266,58 @@ export default function ProjectPipeline() {
   const [voicePitch, setVoicePitch] = useState<number>(0);
   const [voiceEmotion, setVoiceEmotion] = useState<string>('Professional & Calm');
   const [isScriptPreviewOpen, setIsScriptPreviewOpen] = useState(false);
+  
+  const [voiceStability, setVoiceStability] = useState<number>(0.75);
+  const [voiceSimilarityBoost, setVoiceSimilarityBoost] = useState<number>(0.85);
+  const [voiceStyleExaggeration, setVoiceStyleExaggeration] = useState<number>(0.0);
+  const [voiceSpeakerBoost, setVoiceSpeakerBoost] = useState<boolean>(true);
+  const [selectedPreset, setSelectedPreset] = useState<string>('Narration');
+  const [voicePreviewUrl, setVoicePreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const handlePresetChange = (presetName: string) => {
+    setSelectedPreset(presetName);
+    const preset = NARRATION_PRESETS[presetName];
+    if (preset) {
+      setVoiceStability(preset.stability);
+      setVoiceSimilarityBoost(preset.similarity_boost);
+      setVoiceStyleExaggeration(preset.style);
+      setVoiceSpeakerBoost(preset.use_speaker_boost);
+    }
+  };
+
+  const handleGeneratePreview = async () => {
+    setIsPreviewLoading(true);
+    setPreviewError(null);
+    setVoicePreviewUrl(null);
+    try {
+      const res = await fetch('/api/voices/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voiceId: selectedVoiceId,
+          text: 'Hi, this is a live preview of my customized voice settings. How does it sound?',
+          settings: {
+            stability: voiceStability,
+            similarity_boost: voiceSimilarityBoost,
+            style: voiceStyleExaggeration,
+            use_speaker_boost: voiceSpeakerBoost,
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setVoicePreviewUrl(data.audioUrl);
+      } else {
+        setPreviewError(data.error || 'Failed to generate voice preview.');
+      }
+    } catch (err) {
+      setPreviewError('An error occurred during voice preview generation.');
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
 
   // Custom ElevenLabs voices state
   const [elevenLabsVoices, setElevenLabsVoices] = useState<ElevenLabsVoice[]>([]);
@@ -590,6 +657,12 @@ export default function ProjectPipeline() {
         speed: voiceSpeed,
         pitch: voicePitch,
         emotion: voiceEmotion,
+        settings: {
+          stability: voiceStability,
+          similarity_boost: voiceSimilarityBoost,
+          style: voiceStyleExaggeration,
+          use_speaker_boost: voiceSpeakerBoost,
+        }
       });
       setGeneratedAudio(result.audioUrl);
       setStepStatus((s) => ({ ...s, voice: 'done' }));
@@ -668,6 +741,30 @@ export default function ProjectPipeline() {
       const msg = err instanceof Error ? err.message : 'Video generation failed';
       setStepErrors((e) => ({ ...e, video: msg }));
       setStepStatus((s) => ({ ...s, video: 'error' }));
+    }
+  };
+
+  const handleDownloadVideo = async () => {
+    if (!generatedVideoUrl) return;
+    try {
+      setIsDownloading(true);
+      const res = await fetch(generatedVideoUrl);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const blob = await res.blob();
+      const localUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = localUrl;
+      const name = project?.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'avatar-video';
+      a.download = `${name}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(localUrl);
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Failed to download video. The asset may be missing, expired or blocked by cross-origin security.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -921,22 +1018,6 @@ export default function ProjectPipeline() {
                     </div>
                   </div>
 
-                  {session?.user?.role === 'USER' && userCredits && (
-                    <>
-                      {userCredits.scriptCredits === 0 ? (
-                        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
-                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>Insufficient Credits. Contact Administrator.</span>
-                        </div>
-                      ) : userCredits.scriptCredits <= 2 ? (
-                        <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700">
-                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>Low Credits: You have only {userCredits.scriptCredits} script credits remaining.</span>
-                        </div>
-                      ) : null}
-                    </>
-                  )}
-
                   {stepStatus.script === 'error' && stepErrors.script && (
                     <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -946,7 +1027,7 @@ export default function ProjectPipeline() {
 
                   <button
                     onClick={handleGenerateScript}
-                    disabled={!ideaConcept.trim() || stepStatus.script === 'loading' || (session?.user?.role === 'USER' && userCredits?.scriptCredits === 0)}
+                    disabled={!ideaConcept.trim() || stepStatus.script === 'loading'}
                     className="w-full flex items-center justify-center gap-2 rounded-2xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm h-12 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                   >
                     {stepStatus.script === 'loading' ? (
@@ -1272,8 +1353,27 @@ export default function ProjectPipeline() {
                     </div>
                   )}
 
+                  {/* Narration Preset Dropdown */}
+                  <div className="space-y-1.5 border-t border-gray-100 pt-5">
+                    <label className="text-[10px] font-extrabold text-gray-500 uppercase">Narration Style Preset</label>
+                    <div className="relative">
+                      <select
+                        value={selectedPreset}
+                        onChange={(e) => handlePresetChange(e.target.value)}
+                        className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-8 text-xs font-bold text-neutral-700 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+                      >
+                        {Object.keys(NARRATION_PRESETS).map((preset) => (
+                          <option key={preset} value={preset}>
+                            {preset}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
                   {/* Sliders for customization */}
-                  <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-5">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
                         <label className="text-[10px] font-extrabold text-gray-500 uppercase">Speed</label>
@@ -1305,6 +1405,66 @@ export default function ProjectPipeline() {
                         className="w-full accent-black h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-extrabold text-gray-500 uppercase">Stability</label>
+                        <span className="text-[10px] font-bold text-gray-400">{Math.round(voiceStability * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.0"
+                        max="1.0"
+                        step="0.05"
+                        value={voiceStability}
+                        onChange={(e) => setVoiceStability(parseFloat(e.target.value))}
+                        className="w-full accent-black h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-extrabold text-gray-500 uppercase">Clarity / Similarity</label>
+                        <span className="text-[10px] font-bold text-gray-400">{Math.round(voiceSimilarityBoost * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.0"
+                        max="1.0"
+                        step="0.05"
+                        value={voiceSimilarityBoost}
+                        onChange={(e) => setVoiceSimilarityBoost(parseFloat(e.target.value))}
+                        className="w-full accent-black h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-extrabold text-gray-500 uppercase">Style Exaggeration</label>
+                        <span className="text-[10px] font-bold text-gray-400">{Math.round(voiceStyleExaggeration * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.0"
+                        max="1.0"
+                        step="0.05"
+                        value={voiceStyleExaggeration}
+                        onChange={(e) => setVoiceStyleExaggeration(parseFloat(e.target.value))}
+                        className="w-full accent-black h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 flex flex-col justify-end">
+                      <label className="flex items-center gap-2 text-xs font-bold text-gray-600 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={voiceSpeakerBoost}
+                          onChange={(e) => setVoiceSpeakerBoost(e.target.checked)}
+                          className="h-4 w-4 rounded-md border-gray-300 accent-black cursor-pointer"
+                        />
+                        Use Speaker Boost
+                      </label>
+                    </div>
                   </div>
 
                   {/* Emotion Selection */}
@@ -1314,7 +1474,7 @@ export default function ProjectPipeline() {
                       <select
                         value={voiceEmotion}
                         onChange={(e) => setVoiceEmotion(e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-8 text-xs font-bold text-neutral-700 focus:outline-none focus:ring-1 focus:ring-black"
+                        className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-3.5 pr-8 text-xs font-bold text-neutral-700 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
                       >
                         <option value="Professional & Calm">Professional & Calm</option>
                         <option value="Excited & Fast">Excited & Fast</option>
@@ -1325,21 +1485,38 @@ export default function ProjectPipeline() {
                     </div>
                   </div>
 
-                  {session?.user?.role === 'USER' && userCredits && (
-                    <>
-                      {userCredits.voiceCredits === 0 ? (
-                        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
-                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>Insufficient Credits. Contact Administrator.</span>
-                        </div>
-                      ) : userCredits.voiceCredits <= 2 ? (
-                        <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700">
-                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>Low Credits: You have only {userCredits.voiceCredits} voice credits remaining.</span>
-                        </div>
-                      ) : null}
-                    </>
-                  )}
+                  {/* Voice Preview Block */}
+                  <div className="p-4 bg-neutral-50/50 border border-neutral-100 rounded-2xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Voice Preview</span>
+                      <button
+                        type="button"
+                        onClick={handleGeneratePreview}
+                        disabled={isPreviewLoading}
+                        className="text-xs font-bold text-black hover:underline disabled:opacity-40 cursor-pointer"
+                      >
+                        {isPreviewLoading ? 'Generating...' : voicePreviewUrl ? 'Regenerate Preview' : 'Generate Preview'}
+                      </button>
+                    </div>
+                    {isPreviewLoading && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500 font-bold py-1">
+                        <Loader2 className="h-4.5 w-4.5 animate-spin text-black" />
+                        <span>Rendering short sample...</span>
+                      </div>
+                    )}
+                    {previewError && (
+                      <div className="text-[11px] font-semibold text-red-600 bg-red-50/50 border border-red-100 rounded-lg p-2 flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        <span>{previewError}</span>
+                      </div>
+                    )}
+                    {voicePreviewUrl && !isPreviewLoading && (
+                      <div className="space-y-1">
+                        <span className="text-[9px] text-gray-400 font-bold">Listen to custom settings:</span>
+                        <AudioPlayer src={voicePreviewUrl} />
+                      </div>
+                    )}
+                  </div>
 
                   {stepStatus.voice === 'error' && stepErrors.voice && (
                     <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700">
@@ -1358,7 +1535,7 @@ export default function ProjectPipeline() {
                   <div className="flex gap-4 pt-2">
                     <Button
                       onClick={handleGenerateVoice}
-                      disabled={stepStatus.voice === 'loading' || (session?.user?.role === 'USER' && userCredits?.voiceCredits === 0)}
+                      disabled={stepStatus.voice === 'loading'}
                       className="flex-1 rounded-2xl bg-black text-white hover:bg-neutral-800 font-semibold text-sm h-12 flex items-center justify-center gap-1.5"
                     >
                       {stepStatus.voice === 'loading' ? (
@@ -1573,18 +1750,6 @@ export default function ProjectPipeline() {
 
                       {session?.user?.role === 'USER' && userCredits && (
                         <>
-                          {userCredits.videoCredits === 0 ? (
-                            <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700 animate-in fade-in duration-200">
-                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                              <span>Insufficient Credits. Contact Administrator.</span>
-                            </div>
-                          ) : userCredits.videoCredits <= 2 ? (
-                            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700 animate-in fade-in duration-200">
-                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                              <span>Low Credits: You have only {userCredits.videoCredits} video credits remaining.</span>
-                            </div>
-                          ) : null}
-
                           {userCredits.storageUsedGB >= userCredits.storageLimitGB ? (
                             <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs text-red-700 animate-in fade-in duration-200">
                               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -1606,7 +1771,6 @@ export default function ProjectPipeline() {
                         disabled={
                           (customAvatarId.trim() !== '' && (customAvatarLoading || !customAvatar)) ||
                           (session?.user?.role === 'USER' && !!userCredits && (
-                            userCredits.videoCredits === 0 || 
                             userCredits.storageUsedGB >= userCredits.storageLimitGB
                           ))
                         }
@@ -1638,36 +1802,47 @@ export default function ProjectPipeline() {
 
                   {generatedVideoUrl ? (
                     <div className="space-y-5">
-                      <div className={`rounded-2xl bg-black flex items-center justify-center overflow-hidden shadow-sm border border-gray-100 mx-auto w-full transition-all duration-300 ${
+                      <div className={`rounded-2xl bg-black flex items-center justify-center overflow-hidden shadow-sm border border-gray-150 mx-auto w-full transition-all duration-300 ${
                         videoRatio === '9:16' 
                           ? 'aspect-[9/16] max-w-xs sm:max-w-sm' 
                           : videoRatio === '1:1' 
                             ? 'aspect-square max-w-md' 
                             : 'aspect-video'
                       }`}>
-                        <video
-                          src={generatedVideoUrl}
-                          controls
-                          className="w-full h-full object-contain rounded-2xl"
-                        />
+                        {videoError || !generatedVideoUrl ? (
+                          <div className="relative z-20 flex flex-col items-center justify-center p-8 text-center space-y-4 max-w-md mx-auto">
+                            <div className="h-12 w-12 rounded-2xl bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400">
+                              <AlertCircle className="h-6 w-6" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <h4 className="text-sm font-bold text-white">Video Asset Offline</h4>
+                              <p className="text-xs text-neutral-400 leading-relaxed font-medium">
+                                This video asset is missing or has expired in R2 storage. Please regenerate the video to restore access.
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <video
+                            src={generatedVideoUrl}
+                            controls
+                            onError={() => setVideoError(true)}
+                            className="w-full h-full object-contain rounded-2xl"
+                          />
+                        )}
                       </div>
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <a
-                          href={generatedVideoUrl}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            const a = document.createElement('a');
-                            a.href = generatedVideoUrl;
-                            const name = project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                            a.download = `${name || 'avatar-video'}.mp4`;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                          }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-black text-white text-xs font-semibold h-11 hover:bg-neutral-800 transition-colors shadow-sm"
+                        <button
+                          onClick={handleDownloadVideo}
+                          disabled={isDownloading}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-black text-white text-xs font-semibold h-11 hover:bg-neutral-800 transition-colors shadow-sm disabled:opacity-50"
                         >
-                          <Download className="h-4 w-4" /> Download Video
-                        </a>
+                          {isDownloading ? (
+                            <Loader2 className="h-4.5 w-4.5 animate-spin text-white" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          {isDownloading ? 'Saving...' : 'Download Video'}
+                        </button>
                         
                         <button
                           onClick={handleCopyVideoLink}
@@ -1744,12 +1919,6 @@ export default function ProjectPipeline() {
                 <span>Language</span>
                 <span className="font-bold text-black bg-gray-50 border border-gray-100 rounded px-1.5 py-0.5 capitalize">
                   {ideaLanguage}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Est. Cost</span>
-                <span className="text-black font-extrabold flex items-center gap-0.5">
-                  © 45 Credits
                 </span>
               </div>
             </div>

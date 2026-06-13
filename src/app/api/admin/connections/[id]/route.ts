@@ -9,7 +9,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
+  if (!session?.user?.id || !isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -22,7 +23,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid action. Must be DISCONNECT, BLOCK, or RESTORE.' }, { status: 400 });
     }
 
-    const connection = await db.editorConnection.findUnique({
+    const connection = await db.editorUserConnection.findUnique({
       where: { id },
       include: {
         user: { select: { id: true, name: true, email: true } },
@@ -55,7 +56,7 @@ export async function PATCH(
     }
 
     // Update connection status
-    const updated = await db.editorConnection.update({
+    const updated = await db.editorUserConnection.update({
       where: { id },
       data: {
         status: nextStatus,

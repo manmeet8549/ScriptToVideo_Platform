@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { 
   LayoutDashboard, FolderClosed, Copy, Film, FileText, 
-  Share2, Settings, Coins, LogOut, Bell, Menu, X, Sparkles
+  Share2, Settings, LogOut, Bell, Menu, X, Sparkles, Users, Calendar
 } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
 import CreateProjectModal from '@/components/CreateProjectModal';
@@ -21,36 +21,15 @@ export default function UserLayout({
   const user = session?.user;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  const [credits, setCredits] = useState<{
-    scriptCredits: number;
-    voiceCredits: number;
-    videoCredits: number;
-    publishCredits: number;
-    storageLimitGB: number;
-    storageUsedGB: number;
-  } | null>(null);
-
-  const fetchCredits = async () => {
-    try {
-      const res = await fetch('/api/user/credits');
-      const data = await res.json();
-      if (res.ok) setCredits(data.wallet);
-    } catch (err) {
-      console.error('Failed to fetch credits', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchCredits();
-    const interval = setInterval(fetchCredits, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Credits polling removed
 
   const navItems = [
     { href: '/user/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/user/projects', label: 'Projects', icon: FolderClosed },
     { href: '/user/templates', label: 'Templates', icon: Copy },
     { href: '/user/video-library', label: 'Video Library', icon: Film },
+    { href: '/user/calendar', label: 'Calendar', icon: Calendar },
+    { href: '/user/editors', label: 'Editors', icon: Users },
     { href: '/user/assignments', label: 'Assignments', icon: FileText },
     { href: '/user/publish', label: 'Publish', icon: Share2 },
     { href: '/user/settings', label: 'Settings', icon: Settings },
@@ -96,43 +75,7 @@ export default function UserLayout({
             })}
           </nav>
 
-          {/* Credits Meter */}
-          <div className="p-4 bg-neutral-50 border border-neutral-100 rounded-2xl space-y-3 mt-6">
-            <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <span>My Credits</span>
-              <Coins className="h-3.5 w-3.5 text-black" />
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-              <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
-                <span className="text-gray-400">Scripts</span>
-                <span className="text-sm font-black text-black">{credits?.scriptCredits ?? 0}</span>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
-                <span className="text-gray-400">Voices</span>
-                <span className="text-sm font-black text-black">{credits?.voiceCredits ?? 0}</span>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
-                <span className="text-gray-400">Videos</span>
-                <span className="text-sm font-black text-black">{credits?.videoCredits ?? 0}</span>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-neutral-100 flex flex-col">
-                <span className="text-gray-400">Publish</span>
-                <span className="text-sm font-black text-black">{credits?.publishCredits ?? 0}</span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-neutral-100 space-y-1">
-              <div className="flex justify-between text-[9px] text-gray-400 font-bold">
-                <span>Storage Used</span>
-                <span>{credits?.storageUsedGB?.toFixed(2) ?? '0.00'} / {credits?.storageLimitGB ?? 10} GB</span>
-              </div>
-              <div className="bg-gray-200 h-1 rounded-full overflow-hidden">
-                <div 
-                  className="bg-black h-full rounded-full transition-all duration-350" 
-                  style={{ width: `${Math.min(100, Math.round(((credits?.storageUsedGB ?? 0) / (credits?.storageLimitGB ?? 10)) * 100))}%` }} 
-                />
-              </div>
-            </div>
-          </div>
+
         </div>
 
         {/* User Footer Profile */}

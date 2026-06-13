@@ -5,6 +5,7 @@ import { User, Settings, FileText, Key, LifeBuoy, LogOut, Plus, Menu, X } from '
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
+import Link from 'next/link';
 
 export default function Navbar() {
   const { activeTab, setActiveTab, setIsCreateModalOpen, setAuthView } = useAppStore();
@@ -40,9 +41,13 @@ export default function Navbar() {
         { id: 'projects' as const, label: 'Projects' },
         { id: 'templates' as const, label: 'Templates' },
       ]
-    : [
-        { id: 'dashboard' as const, label: 'Dashboard' },
-      ];
+    : [];
+
+  const guestNavItems = [
+    { href: '/features', label: 'Features' },
+    { href: '/#how-it-works', label: 'How It Works' },
+    { href: '/contact', label: 'Contact' },
+  ];
 
   const dropdownItems = [
     { icon: FileText, label: 'My Projects', action: () => { setActiveTab('projects'); setIsDropdownOpen(false); setIsMobileMenuOpen(false); } },
@@ -91,20 +96,32 @@ export default function Navbar() {
 
         {/* Navigation (Desktop Only) */}
         <nav className="hidden md:flex gap-8">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`relative py-5 text-sm font-medium transition-colors ${
-                activeTab === item.id ? 'text-black' : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              {item.label}
-              {activeTab === item.id && (
-                <span className="absolute bottom-0 left-0 h-0.5 w-full bg-black" />
-              )}
-            </button>
-          ))}
+          {user ? (
+            navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`relative py-5 text-sm font-medium transition-colors ${
+                  activeTab === item.id ? 'text-black' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {item.label}
+                {activeTab === item.id && (
+                  <span className="absolute bottom-0 left-0 h-0.5 w-full bg-black" />
+                )}
+              </button>
+            ))
+          ) : (
+            guestNavItems.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="relative py-5 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))
+          )}
         </nav>
 
         {/* Right Actions */}

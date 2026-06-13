@@ -88,6 +88,7 @@ function VideoCard({
   handlePublish,
   activeAssignment,
   handleAssignEditor,
+  downloadingId,
 }: {
   video: VideoItem;
   setActiveWatchVideo: (video: VideoItem) => void;
@@ -100,6 +101,7 @@ function VideoCard({
   handlePublish: (video: VideoItem) => void;
   activeAssignment?: AssignmentItem;
   handleAssignEditor: (video: VideoItem) => void;
+  downloadingId: string | null;
 }) {
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -320,11 +322,16 @@ function VideoCard({
 
           <button
             onClick={() => handleDownload(video)}
-            className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-gray-150 text-gray-600 hover:text-black hover:bg-neutral-50 active:bg-neutral-100 transition-all"
+            disabled={downloadingId === video.id}
+            className="flex justify-center items-center gap-1.5 py-2 text-xs font-bold rounded-xl border border-gray-150 text-gray-600 hover:text-black hover:bg-neutral-50 active:bg-neutral-100 transition-all disabled:opacity-50"
             title="Download Video"
           >
-            <Download className="h-3.5 w-3.5" />
-            <span>Get</span>
+            {downloadingId === video.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span>{downloadingId === video.id ? 'Saving...' : 'Get'}</span>
           </button>
 
           <button
@@ -349,6 +356,12 @@ export default function VideoLibrary() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [activeWatchVideo, setActiveWatchVideo] = useState<VideoItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState(false);
+
+  useEffect(() => {
+    setVideoError(false);
+  }, [activeWatchVideo]);
 
   // States for Assigning Editor
   const [assigningVideo, setAssigningVideo] = useState<VideoItem | null>(null);
@@ -454,16 +467,27 @@ export default function VideoLibrary() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDownload = (video: VideoItem) => {
-    // Standard download trigger via temporary anchor element
-    const a = document.createElement('a');
-    a.href = video.videoUrl;
-    // Format filename: project-name.mp4 (or slugified)
-    const sanitizedTitle = video.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    a.download = `${sanitizedTitle || 'avatar-video'}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownload = async (video: VideoItem) => {
+    try {
+      setDownloadingId(video.id);
+      const res = await fetch(video.videoUrl);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const blob = await res.blob();
+      const localUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = localUrl;
+      const sanitizedTitle = video.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      a.download = `${sanitizedTitle || 'avatar-video'}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(localUrl);
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Failed to download video. The asset may be missing, expired or blocked by cross-origin security.');
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -584,6 +608,7 @@ export default function VideoLibrary() {
                   setSelectedEditorId(activeEditors[0].editor.id);
                 }
               }}
+              downloadingId={downloadingId}
             />
           </motion.div>
         ))}
@@ -652,12 +677,27 @@ export default function VideoLibrary() {
                         className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 select-none pointer-events-none" 
                       />
                     ) : null}
-                    <video
-                      src={activeWatchVideo.videoUrl}
-                      controls
-                      autoPlay
-                      className="relative z-10 w-full h-full object-contain"
-                    />
+                    {videoError || !activeWatchVideo.videoUrl ? (
+                      <div className="relative z-20 flex flex-col items-center justify-center p-8 text-center space-y-4 max-w-md mx-auto">
+                        <div className="h-12 w-12 rounded-2xl bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400">
+                          <X className="h-6 w-6" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <h4 className="text-sm font-bold text-white">Video Asset Offline</h4>
+                          <p className="text-xs text-neutral-400 leading-relaxed font-medium">
+                            This video asset is missing or has expired in R2 storage. Please regenerate the video to restore access.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <video
+                        src={activeWatchVideo.videoUrl}
+                        controls
+                        autoPlay
+                        onError={() => setVideoError(true)}
+                        className="relative z-10 w-full h-full object-contain"
+                      />
+                    )}
                   </div>
                 </motion.div>
               );

@@ -1,6 +1,7 @@
 'use client';
 
 import SettingsSection from '@/components/SettingsSection';
+import SecurityAccountSection from '@/components/SecurityAccountSection';
 
 export default function UserSettingsPage() {
   return (
@@ -15,6 +16,9 @@ export default function UserSettingsPage() {
       </div>
       <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xs">
         <SettingsSection />
+      </div>
+      <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xs">
+        <SecurityAccountSection />
       </div>
     </div>
   );

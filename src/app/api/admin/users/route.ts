@@ -6,7 +6,8 @@ import bcrypt from 'bcryptjs';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
+  if (!session?.user?.id || !isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -22,7 +23,17 @@ export async function GET() {
         accountStatus: true,
         createdAt: true,
         lastLoginAt: true,
-        creditWallet: true,
+        connectionsAsUser: {
+          where: { status: 'ACTIVE' },
+          include: {
+            editor: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             projects: true,
@@ -40,16 +51,11 @@ export async function GET() {
       phoneNumber: u.phoneNumber || null,
       role: u.role,
       status: u.accountStatus,
-      createdAt: u.createdAt,
-      lastLoginAt: u.lastLoginAt,
+      createdAt: u.createdAt.toISOString(),
+      lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
       projectsCount: u._count.projects,
       videosCount: u._count.videos,
-      credits: u.creditWallet ? {
-        scriptCredits: u.creditWallet.scriptCredits,
-        voiceCredits: u.creditWallet.voiceCredits,
-        videoCredits: u.creditWallet.videoCredits,
-        publishCredits: u.creditWallet.publishCredits,
-      } : null,
+      assignedEditors: u.connectionsAsUser.map(c => c.editor.name || c.editor.email).join(', ') || 'None',
     }));
 
     return NextResponse.json({ users: formatted });
@@ -61,7 +67,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'ADMIN') {
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'ORG_ADMIN'].includes(session?.user?.role || '');
+  if (!session?.user?.id || !isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
