@@ -93,7 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token = await authConfig.callbacks.jwt({ token, user });
 
       // If we are in Node.js server context, check database for latest role/status if missing
-      if (!user && token.id && (!token.role || !token.accountStatus || token.mustChangePassword === undefined || token.organizationId === undefined)) {
+      if (token.id && (!token.role || !token.accountStatus || token.mustChangePassword === undefined || token.organizationId === undefined)) {
         const dbUser = await db.user.findUnique({
           where: { id: token.id },
           select: { role: true, accountStatus: true, mustChangePassword: true, organizationId: true },

@@ -17,127 +17,135 @@ export default auth(async (req) => {
   const user = req.auth?.user;
   const path = nextUrl.pathname;
 
-  // Define route classifications
-  const isSuperAdminRoute = path.startsWith('/super-admin') || path.startsWith('/api/super-admin');
-  const isAdminRoute = path.startsWith('/admin') || path.startsWith('/api/admin');
-  const isEditorRoute = path.startsWith('/editor') || path.startsWith('/api/editor');
-  
-  // Protect /user and /api/user routes (exempting NextAuth endpoints and common profile/settings checks if needed)
-  const isUserRoute = 
-    (path.startsWith('/user') || path.startsWith('/api/user')) && 
-    !path.startsWith('/api/auth') && 
-    path !== '/api/user/settings';
-
-  const isProtectedRoute = isSuperAdminRoute || isAdminRoute || isEditorRoute || isUserRoute;
-
-  // 1. Unauthenticated checks for protected routes
-  if (!isLoggedIn) {
-    if (isProtectedRoute) {
-      if (path.startsWith('/api')) {
-        return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
-      }
-      return NextResponse.redirect(new URL('/login', nextUrl.origin));
-    }
+  // 1. Ignore static/next assets and public files to speed up processing
+  if (
+    path.startsWith('/_next') ||
+    path.includes('.') ||
+    path.startsWith('/images/')
+  ) {
     return NextResponse.next();
   }
 
-  // 2. Authenticated user checks (role & status)
-  if (user) {
+  // 2. Define route classifications
+  const isSuperAdminRoute = path.startsWith('/super-admin') || path.startsWith('/api/super-admin');
+  const isAdminRoute = path.startsWith('/admin') || path.startsWith('/api/admin');
+  const isEditorRoute = path.startsWith('/editor') || path.startsWith('/api/editor');
+  const isUserRoute = path.startsWith('/user') || path.startsWith('/api/user');
+
+  const isProtectedRoute = (isSuperAdminRoute || isAdminRoute || isEditorRoute || isUserRoute) && 
+    !path.startsWith('/api/auth');
+
+  const isAuthPage = path === '/login' || path === '/signup' || path === '/signin';
+
+  // We will track the redirect destination if any
+  let targetRoute: string | null = null;
+
+  // 3. Unauthenticated User checks
+  if (!isLoggedIn) {
+    if (isProtectedRoute) {
+      if (path.startsWith('/api')) {
+        targetRoute = 'API_UNAUTHORIZED';
+      } else {
+        targetRoute = '/login';
+      }
+    }
+  } else if (user) {
+    // 4. Authenticated User checks
     const role = user.role;
     const status = user.accountStatus;
 
-    // A. Enforce STOPPED or DELETED constraints
+    // A. Stopped/Deleted block
     if (status === 'STOPPED' || status === 'DELETED') {
-      // Allow signout/auth callbacks to avoid redirect loops or lockout from logging out
-      if (path.startsWith('/api/auth') || path.startsWith('/api/publish/disconnect')) {
-        return NextResponse.next();
+      const isExempt = path.startsWith('/api/auth') || path.startsWith('/api/publish/disconnect');
+      if (!isExempt) {
+        if (path.startsWith('/api')) {
+          targetRoute = 'API_DISABLED';
+        } else {
+          targetRoute = 'DISABLED_HTML';
+        }
+      }
+    } else {
+      // B. Paused status API locks
+      if (status === 'PAUSED') {
+        const isGenerationApi = 
+          path.startsWith('/api/generate/script') ||
+          path.startsWith('/api/generate/voice') ||
+          path.startsWith('/api/generate/video');
+        const isPublishApi = path.startsWith('/api/publish/upload');
+
+        if (isGenerationApi || isPublishApi) {
+          targetRoute = 'API_PAUSED';
+        }
       }
 
-      if (path.startsWith('/api')) {
-        return NextResponse.json(
-          { error: 'Account disabled. Please contact administrator.' },
-          { status: 403 }
-        );
+      // Only perform role redirection logic if status is not blocked or paused-api
+      if (!targetRoute) {
+        const resolvedRole = role || 'USER';
+
+        // C. Authenticated users trying to hit /login, /signup, /signin -> Redirect to their dashboard
+        if (isAuthPage) {
+          targetRoute = getDashboardUrl(resolvedRole);
+        }
+
+        // D. Strict Role Access Protection
+        const isAdminRole = resolvedRole === 'SUPER_ADMIN' || resolvedRole === 'ORG_ADMIN' || resolvedRole === 'ADMIN';
+        const isEditorRole = resolvedRole === 'EDITOR';
+        const isUserRoleType = resolvedRole === 'USER';
+
+        if (isAdminRoute || isSuperAdminRoute) {
+          if (!isAdminRole) {
+            targetRoute = getDashboardUrl(resolvedRole);
+          }
+        } else if (isEditorRoute) {
+          if (!isEditorRole) {
+            targetRoute = getDashboardUrl(resolvedRole);
+          }
+        } else if (isUserRoute) {
+          if (!isUserRoleType) {
+            targetRoute = getDashboardUrl(resolvedRole);
+          }
+        }
       }
+    }
+  }
+
+  // 5. Debug Logging (Task 6)
+  const resolvedRole = user?.role || (isLoggedIn ? 'USER' : undefined);
+  console.log({
+    pathname: path,
+    role: resolvedRole,
+    isAuthenticated: isLoggedIn,
+    targetRoute: targetRoute
+  });
+
+  // 6. Execute Redirection or Next request
+  if (targetRoute) {
+    if (targetRoute === 'API_UNAUTHORIZED') {
+      return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
+    }
+    if (targetRoute === 'API_DISABLED') {
+      return NextResponse.json({ error: 'Account disabled. Please contact administrator.' }, { status: 403 });
+    }
+    if (targetRoute === 'API_PAUSED') {
+      return NextResponse.json({ error: 'Account is paused. Content generation is disabled.' }, { status: 403 });
+    }
+    if (targetRoute === 'DISABLED_HTML') {
       return new NextResponse('Account disabled. Please contact support.', { status: 403 });
     }
 
-    // B. Enforce PAUSED status constraints
-    if (status === 'PAUSED') {
-      const isGenerationApi = 
-        path.startsWith('/api/generate/script') ||
-        path.startsWith('/api/generate/voice') ||
-        path.startsWith('/api/generate/video');
-      const isPublishApi = path.startsWith('/api/publish/upload');
-
-      if (isGenerationApi || isPublishApi) {
-        return NextResponse.json(
-          { error: 'Account is paused. Content generation and publishing are disabled.' },
-          { status: 403 }
-        );
-      }
+    // Prevent Self-Redirect loops (Task 5)
+    if (path === targetRoute) {
+      return NextResponse.next();
     }
 
-    // Root/Login/Signup path redirection based on role
-    if (path === '/' || path === '/login' || path === '/signup') {
-      return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
-    }
-
-    // C. Enforce Super Admin Routes (Only SUPER_ADMIN)
-    if (isSuperAdminRoute) {
-      if (role !== 'SUPER_ADMIN') {
-        if (path.startsWith('/api')) {
-          return NextResponse.json({ error: 'Access denied. Super Administrator role required.' }, { status: 403 });
-        }
-        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
-      }
-    }
-
-    // D. Enforce Admin Routes (SUPER_ADMIN, ORG_ADMIN or legacy ADMIN)
-    if (isAdminRoute) {
-      if (role !== 'SUPER_ADMIN' && role !== 'ORG_ADMIN' && role !== 'ADMIN') {
-        if (path.startsWith('/api')) {
-          return NextResponse.json({ error: 'Access denied. Administrator role required.' }, { status: 403 });
-        }
-        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
-      }
-    }
-
-    // E. Enforce Editor Routes (SUPER_ADMIN, ORG_ADMIN, EDITOR or legacy ADMIN)
-    if (isEditorRoute) {
-      if (role !== 'SUPER_ADMIN' && role !== 'ORG_ADMIN' && role !== 'EDITOR' && role !== 'ADMIN') {
-        if (path.startsWith('/api')) {
-          return NextResponse.json({ error: 'Access denied. Editor role required.' }, { status: 403 });
-        }
-        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
-      }
-    }
-
-    // F. Enforce User Routes (SUPER_ADMIN, ORG_ADMIN, USER or legacy ADMIN)
-    if (isUserRoute) {
-      if (role !== 'SUPER_ADMIN' && role !== 'ORG_ADMIN' && role !== 'USER' && role !== 'ADMIN') {
-        if (path.startsWith('/api')) {
-          return NextResponse.json({ error: 'Access denied. User role required.' }, { status: 403 });
-        }
-        return NextResponse.redirect(new URL(getDashboardUrl(role), nextUrl.origin));
-      }
-    }
+    return NextResponse.redirect(new URL(targetRoute, nextUrl.origin));
   }
 
   return NextResponse.next();
 });
 
-// Configure matcher to intercept appropriate paths
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images/ (public images)
-     * - ThinkNEXT-LOGO-NEW.svg
-     */
     '/((?!_next/static|_next/image|favicon.ico|images/|ThinkNEXT-LOGO-NEW.svg).*)',
   ],
 };

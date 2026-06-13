@@ -32,7 +32,7 @@ declare module '@auth/core/jwt' {
 
 export const authConfig = {
   session: { strategy: 'jwt' },
-  pages: { signIn: '/' },
+  pages: { signIn: '/login' },
   providers: [], // Configured in auth.ts
   callbacks: {
     async jwt({ token, user }) {
