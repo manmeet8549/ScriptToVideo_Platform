@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
+    return NextResponse.json({ success: false, message: 'Unauthorized. Please log in.', error: 'Unauthorized. Please log in.' }, { status: 401 });
   }
 
   try {
@@ -15,15 +15,15 @@ export async function POST(request: NextRequest) {
 
     // 1. Inputs validation
     if (!currentPassword || !newPassword || !confirmPassword) {
-      return NextResponse.json({ error: 'All password fields are required.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'All password fields are required.', error: 'All password fields are required.' }, { status: 400 });
     }
 
     if (newPassword.length < 8) {
-      return NextResponse.json({ error: 'New password must be at least 8 characters long.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'New password must be at least 8 characters long.', error: 'New password must be at least 8 characters long.' }, { status: 400 });
     }
 
     if (newPassword !== confirmPassword) {
-      return NextResponse.json({ error: 'New password and confirmation password do not match.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'New password and confirmation password do not match.', error: 'New password and confirmation password do not match.' }, { status: 400 });
     }
 
     // 2. Fetch the user's password hash from database
@@ -33,18 +33,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'User not found.', error: 'User not found.' }, { status: 404 });
     }
 
     // If OAuth user has no passwordHash set yet
     if (!user.passwordHash) {
-      return NextResponse.json({ error: 'Accounts connected via Google/OAuth do not have a password. Please sign in via Google.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Accounts connected via Google/OAuth do not have a password. Please sign in via Google.', error: 'Accounts connected via Google/OAuth do not have a password. Please sign in via Google.' }, { status: 400 });
     }
 
     // 3. Verify current password
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isMatch) {
-      return NextResponse.json({ error: 'Current password is incorrect.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Current password is incorrect.', error: 'Current password is incorrect.' }, { status: 400 });
     }
 
     // 4. Hash the new password
@@ -66,6 +66,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: 'Password changed successfully.' });
   } catch (error) {
     console.error('[USER/CHANGE-PASSWORD] Error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred while changing password.' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'An unexpected error occurred while changing password.', error: 'An unexpected error occurred while changing password.' }, { status: 500 });
   }
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
 import CreateProjectModal from '@/components/CreateProjectModal';
+import { useAppStore } from '@/store/store';
 
 export default function UserLayout({
   children,
@@ -26,10 +27,8 @@ export default function UserLayout({
   const navItems = [
     { href: '/user/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/user/projects', label: 'Projects', icon: FolderClosed },
-    { href: '/user/templates', label: 'Templates', icon: Copy },
     { href: '/user/video-library', label: 'Video Library', icon: Film },
-    { href: '/user/calendar', label: 'Calendar', icon: Calendar },
-    { href: '/user/editors', label: 'Editors', icon: Users },
+    { href: '/user/editors', label: 'Editor Connections', icon: Users },
     { href: '/user/assignments', label: 'Assignments', icon: FileText },
     { href: '/user/publish', label: 'Publish', icon: Share2 },
     { href: '/user/settings', label: 'Settings', icon: Settings },
@@ -91,7 +90,10 @@ export default function UserLayout({
           </div>
           
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => {
+              useAppStore.getState().reset();
+              signOut({ callbackUrl: '/' });
+            }}
             className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50/50"
             title="Log out"
           >
@@ -148,7 +150,10 @@ export default function UserLayout({
                   <span className="font-semibold text-xs text-black truncate block">{user?.name}</span>
                 </div>
               </div>
-              <button onClick={() => signOut({ callbackUrl: '/' })}>
+              <button onClick={() => {
+                useAppStore.getState().reset();
+                signOut({ callbackUrl: '/' });
+              }}>
                 <LogOut className="h-4 w-4 text-gray-400" />
               </button>
             </div>

@@ -8,6 +8,7 @@ import {
   LayoutDashboard, FileText, UploadCloud, Settings, LogOut, Menu, X, Users, Calendar 
 } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
+import { useAppStore } from '@/store/store';
 
 export default function EditorLayout({
   children,
@@ -82,7 +83,10 @@ export default function EditorLayout({
           </div>
           
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => {
+              useAppStore.getState().reset();
+              signOut({ callbackUrl: '/' });
+            }}
             className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50/50"
             title="Log out"
           >
@@ -139,7 +143,10 @@ export default function EditorLayout({
                   <span className="font-semibold text-xs text-black truncate block">{user?.name}</span>
                 </div>
               </div>
-              <button onClick={() => signOut({ callbackUrl: '/' })}>
+              <button onClick={() => {
+                useAppStore.getState().reset();
+                signOut({ callbackUrl: '/' });
+              }}>
                 <LogOut className="h-4 w-4 text-gray-400" />
               </button>
             </div>

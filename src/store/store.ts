@@ -32,6 +32,7 @@ interface AppState {
   setIsCreateModalOpen: (open: boolean) => void;
   setAuthView: (view: 'login' | 'signup' | null) => void;
   setPrefilledProjectData: (data: { name: string; prompt: string; videoRatio: '16:9' | '9:16' | '1:1'; voiceAccent: string } | null) => void;
+  reset: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -55,6 +56,15 @@ export const useAppStore = create<AppState>()(
       setIsCreateModalOpen: (open) => set({ isCreateModalOpen: open }),
       setAuthView: (view) => set({ authView: view }),
       setPrefilledProjectData: (data) => set({ prefilledProjectData: data }),
+      reset: () => set({
+        activeTab: 'dashboard',
+        selectedProjectId: null,
+        activeStepIndex: null,
+        searchQuery: '',
+        isCreateModalOpen: false,
+        authView: null,
+        prefilledProjectData: null,
+      }),
     }),
     {
       name: 'scriptforge-ui-store',

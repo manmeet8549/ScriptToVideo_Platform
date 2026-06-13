@@ -29,10 +29,17 @@ export default auth(async (req) => {
   // 2. Define route classifications
   const isSuperAdminRoute = path.startsWith('/super-admin') || path.startsWith('/api/super-admin');
   const isAdminRoute = path.startsWith('/admin') || path.startsWith('/api/admin');
-  const isEditorRoute = path.startsWith('/editor') || path.startsWith('/api/editor');
-  const isUserRoute = path.startsWith('/user') || path.startsWith('/api/user');
+  const isEditorRoute = path.startsWith('/editor') || path.startsWith('/api/editor/') || path === '/api/editor';
+  const isUserRoute = (path.startsWith('/user') || path.startsWith('/api/user')) &&
+    !path.startsWith('/api/user/settings') &&
+    !path.startsWith('/api/user/change-password');
 
-  const isProtectedRoute = (isSuperAdminRoute || isAdminRoute || isEditorRoute || isUserRoute) && 
+  const isSharedRoute = 
+    path.startsWith('/api/editors') ||
+    path.startsWith('/api/user/settings') ||
+    path.startsWith('/api/user/change-password');
+
+  const isProtectedRoute = (isSuperAdminRoute || isAdminRoute || isEditorRoute || isUserRoute || isSharedRoute) && 
     !path.startsWith('/api/auth');
 
   const isAuthPage = path === '/login' || path === '/signup' || path === '/signin';
@@ -82,8 +89,8 @@ export default auth(async (req) => {
       if (!targetRoute) {
         const resolvedRole = role || 'USER';
 
-        // C. Authenticated users trying to hit /login, /signup, /signin -> Redirect to their dashboard
-        if (isAuthPage) {
+        // C. Authenticated users trying to hit /login, /signup, /signin, or / -> Redirect to their dashboard
+        if (isAuthPage || path === '/') {
           targetRoute = getDashboardUrl(resolvedRole);
         }
 

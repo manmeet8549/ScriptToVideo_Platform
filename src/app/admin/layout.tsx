@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import ThinkNextLogo from '@/components/ThinkNextLogo';
 import { signOut } from 'next-auth/react';
+import { useAppStore } from '@/store/store';
 
 export default function AdminLayout({
   children,
@@ -18,14 +19,13 @@ export default function AdminLayout({
 
   const navItems = [
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/editors', label: 'Editors', icon: Video },
-    { href: '/admin/projects', label: 'Projects', icon: FolderClosed },
-    { href: '/admin/calendar', label: 'Calendar', icon: Calendar },
-    { href: '/admin/video-library', label: 'Video Library', icon: Film },
-    { href: '/admin/publishing', label: 'Publishing', icon: Share2 },
+    { href: '/admin/users', label: 'Users Management', icon: Users },
+    { href: '/admin/editors', label: 'Editors Management', icon: Video },
+    { href: '/admin/projects', label: 'Project Monitoring', icon: FolderClosed },
+    { href: '/admin/video-library', label: 'All Videos', icon: Film },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/admin/api-keys', label: 'API Keys', icon: KeyRound },
+    { href: '/admin/calendar', label: 'Calendar / Scheduling', icon: Calendar },
+    { href: '/admin/api-keys', label: 'API Management', icon: KeyRound },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -69,7 +69,10 @@ export default function AdminLayout({
         {/* Logout button */}
         <div className="pt-4 border-t border-gray-100">
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => {
+              useAppStore.getState().reset();
+              signOut({ callbackUrl: '/' });
+            }}
             className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-gray-500 hover:text-red-600 hover:bg-red-50/50 rounded-xl transition-all duration-200 text-left"
           >
             <LogOut className="h-4 w-4 shrink-0" />

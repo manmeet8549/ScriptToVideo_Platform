@@ -6,19 +6,19 @@ import { logActivity } from '@/lib/admin';
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, message: 'Unauthorized', error: 'Unauthorized' }, { status: 401 });
   }
 
   // Ensure role is USER or ADMIN
   if (session.user.role !== 'USER' && session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ success: false, message: 'Forbidden', error: 'Forbidden' }, { status: 403 });
   }
 
   try {
     const { editorKey } = await request.json();
 
     if (!editorKey?.trim()) {
-      return NextResponse.json({ error: 'Editor connection code is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Editor connection code is required.', error: 'Editor connection code is required.' }, { status: 400 });
     }
 
     const trimmedKey = editorKey.trim();
@@ -40,27 +40,27 @@ export async function POST(request: NextRequest) {
     });
 
     if (!editorProfile || !editorProfile.user || editorProfile.user.deletedAt) {
-      return NextResponse.json({ error: 'Invalid Editor Connection Code.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Invalid Editor Connection Code.', error: 'Invalid Editor Connection Code.' }, { status: 400 });
     }
 
     const editorUser = editorProfile.user;
 
     // Reject paused, stopped or deleted editors
     if (editorUser.accountStatus === 'DELETED') {
-      return NextResponse.json({ error: 'Invalid Editor Connection Code.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Invalid Editor Connection Code.', error: 'Invalid Editor Connection Code.' }, { status: 400 });
     }
 
     if (editorUser.accountStatus === 'PAUSED') {
-      return NextResponse.json({ error: 'This editor account is currently paused.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'This editor account is currently paused.', error: 'This editor account is currently paused.' }, { status: 400 });
     }
 
     if (editorUser.accountStatus === 'STOPPED') {
-      return NextResponse.json({ error: 'This editor account is currently stopped.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'This editor account is currently stopped.', error: 'This editor account is currently stopped.' }, { status: 400 });
     }
 
     // A user cannot connect to themselves
     if (editorUser.id === session.user.id) {
-      return NextResponse.json({ error: 'You cannot connect to yourself.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'You cannot connect to yourself.', error: 'You cannot connect to yourself.' }, { status: 400 });
     }
 
     // 2. Check if a connection already exists
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
 
       if (existingConnection.status === 'BLOCKED') {
         return NextResponse.json(
-          { error: 'Connection with this editor is blocked by administrator.' },
+          { success: false, message: 'Connection with this editor is blocked by administrator.', error: 'Connection with this editor is blocked by administrator.' },
           { status: 400 }
         );
       }
@@ -146,6 +146,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[EDITORS/CONNECT] Error:', error);
-    return NextResponse.json({ error: 'Failed to connect editor.' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Failed to connect editor.', error: 'Failed to connect editor.' }, { status: 500 });
   }
 }
